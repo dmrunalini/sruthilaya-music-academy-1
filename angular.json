@@ -2,7 +2,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "sruthilaya-music-academy": {
+    "sruthilaya-music-academy-1": {
       "projectType": "application",
       "root": "sruthilaya-music-academy",
       "sourceRoot": "src",
@@ -95,5 +95,5 @@
       }
     }
   },
-  "defaultProject": "sruthilaya-music-academy"
+  "defaultProject": "sruthilaya-music-academy-1"
 }
