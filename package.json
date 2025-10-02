@@ -1,0 +1,29 @@
+{
+  "name": "sruthilaya-music-academy",
+  "version": "1.0.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "test": "ng test",
+    "lint": "ng lint",
+    "e2e": "ng e2e"
+  },
+  "private": true,
+  "dependencies": {
+    "@angular/common": "~19.2.15",
+    "@angular/core": "~19.2.15",
+    "@angular/fire": "^6.1.5",
+    "@angular/router": "~19.2.15",
+    "firebase": "^10.4.0",
+    "rxjs": "~7.8.0",
+    "zone.js": "~0.13.3"
+  },
+  "devDependencies": {
+    "@angular/cli": "~19.2.15",
+    "@angular/compiler-cli": "~19.2.15",
+    "@types/jasmine": "~4.3.0",
+    "@types/node": "~18.20.8",
+    "typescript": "~7.8.0"
+  }
+}

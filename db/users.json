@@ -1,0 +1,22 @@
+[
+  {
+    "id": "teacher_anna",
+    "role": "teacher",
+    "name": "Anna Rao",
+    "phone": "+919876543210",
+    "age": 32,
+    "gender": "female",
+    "teamsLink": "https://teams.microsoft.com/l/meetup-join/teacher-anna",
+    "createdAt": "2025-10-01T08:00:00Z"
+  },
+  {
+    "id": "student_ravi",
+    "role": "student",
+    "name": "Ravi Kumar",
+    "phone": "+919812345678",
+    "age": 14,
+    "gender": "male",
+    "teamsLink": "https://teams.microsoft.com/l/meetup-join/student-ravi",
+    "createdAt": "2025-10-01T09:00:00Z"
+  }
+]

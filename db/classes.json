@@ -1,0 +1,12 @@
+[
+  {
+    "id": "class_1",
+    "teacherId": "teacher_anna",
+    "studentId": "student_ravi",
+    "studentName": "Ravi Kumar",
+    "start": "2025-10-06T15:00:00Z",
+    "end": "2025-10-06T15:30:00Z",
+    "status": "scheduled",
+    "createdAt": "2025-10-01T11:00:00Z"
+  }
+]

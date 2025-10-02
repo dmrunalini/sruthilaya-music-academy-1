@@ -1,0 +1,10 @@
+[
+  {
+    "id": "notif_1",
+    "classId": "class_1",
+    "toPhone": "+919812345678",
+    "scheduledAt": "2025-10-06T14:55:00Z",
+    "sent": false,
+    "message": "Reminder: Your class with Anna starts at 15:00 UTC in 5 minutes."
+  }
+]
