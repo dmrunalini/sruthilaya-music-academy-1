@@ -1,33 +1,31 @@
 import { Injectable } from '@angular/core';
-import { AngularFirestore } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
+import { FirestoreService } from './firestore.service';
 import { Class } from '../models/class.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CalendarService {
-
-  constructor(private firestore: AngularFirestore) { }
+  constructor(private firestore: FirestoreService) { }
 
   getClasses(): Observable<Class[]> {
-    return this.firestore.collection<Class>('classes').valueChanges();
+    return this.firestore.getClasses();
   }
 
   addClass(newClass: Class): Promise<void> {
-    const id = this.firestore.createId();
-    return this.firestore.collection('classes').doc(id).set({ ...newClass, id });
+    return this.firestore.createClass(newClass).then(() => undefined);
   }
 
   updateClass(updatedClass: Class): Promise<void> {
-    return this.firestore.collection('classes').doc(updatedClass.id).update(updatedClass);
+    return this.firestore.updateClass(updatedClass.id!, updatedClass);
   }
 
   deleteClass(classId: string): Promise<void> {
-    return this.firestore.collection('classes').doc(classId).delete();
+    return this.firestore.deleteClass(classId);
   }
 
-  getClassById(classId: string): Observable<Class> {
-    return this.firestore.collection<Class>('classes').doc(classId).valueChanges();
+  getClassById(classId: string): Observable<Class | undefined> {
+    return this.firestore.getClass(classId);
   }
 }

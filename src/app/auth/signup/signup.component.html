@@ -1,0 +1,36 @@
+<div class="signup">
+  <h2>Sign up</h2>
+  <form (ngSubmit)="onSubmit()" [formGroup]="signupForm">
+    <label>Name</label>
+    <input formControlName="name" />
+
+    <label>Email</label>
+    <input formControlName="email" />
+
+    <label>Password</label>
+    <input type="password" formControlName="password" />
+
+    <label>Phone</label>
+    <input formControlName="phone" />
+
+    <label>Age</label>
+    <input type="number" formControlName="age" />
+
+    <label>Gender</label>
+    <select formControlName="gender">
+      <option value="">Select</option>
+      <option value="male">Male</option>
+      <option value="female">Female</option>
+      <option value="other">Other</option>
+    </select>
+
+    <label>Teams link (optional)</label>
+    <input formControlName="teamsLink" />
+
+    <div *ngIf="errorMessage" class="error">{{ errorMessage }}</div>
+
+    <button type="submit" [disabled]="isSubmitting">Sign up</button>
+  </form>
+
+  <p>Already have an account? <a routerLink="/login">Login</a></p>
+</div>

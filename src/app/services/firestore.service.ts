@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { AngularFirestore } from '@angular/fire/firestore';
+import { Observable, of } from 'rxjs';
 import { User } from '../models/user.model';
 import { Class } from '../models/class.model';
 import { Material } from '../models/material.model';
@@ -8,65 +8,80 @@ import { Material } from '../models/material.model';
   providedIn: 'root'
 })
 export class FirestoreService {
+  private users = new Map<string, User>();
+  private classes = new Map<string, Class>();
+  private materials = new Map<string, Material>();
 
-  constructor(private firestore: AngularFirestore) { }
+  constructor() { }
 
-  // User CRUD operations
+  // User CRUD operations (in-memory)
   createUser(user: User) {
-    return this.firestore.collection('users').add(user);
+    const id = (user.email || 'user') + '_' + Date.now();
+    this.users.set(id, { ...user });
+    return Promise.resolve({ id });
   }
 
-  getUser(userId: string) {
-    return this.firestore.collection('users').doc(userId).valueChanges();
+  getUser(userId: string): Observable<User | undefined> {
+    return of(this.users.get(userId));
   }
 
   updateUser(userId: string, user: User) {
-    return this.firestore.collection('users').doc(userId).update(user);
+    this.users.set(userId, user);
+    return Promise.resolve();
   }
 
   deleteUser(userId: string) {
-    return this.firestore.collection('users').doc(userId).delete();
+    this.users.delete(userId);
+    return Promise.resolve();
   }
 
-  // Class CRUD operations
+  // Class CRUD operations (in-memory)
   createClass(classData: Class) {
-    return this.firestore.collection('classes').add(classData);
+    const id = 'class_' + Date.now();
+    this.classes.set(id, { ...classData, id });
+    return Promise.resolve({ id });
   }
 
-  getClasses() {
-    return this.firestore.collection<Class>('classes').valueChanges();
+  getClasses(): Observable<Class[]> {
+    return of(Array.from(this.classes.values()));
   }
 
-  getClass(classId: string) {
-    return this.firestore.collection('classes').doc(classId).valueChanges();
+  getClass(classId: string): Observable<Class | undefined> {
+    return of(this.classes.get(classId));
   }
 
   updateClass(classId: string, classData: Class) {
-    return this.firestore.collection('classes').doc(classId).update(classData);
+    this.classes.set(classId, classData);
+    return Promise.resolve();
   }
 
   deleteClass(classId: string) {
-    return this.firestore.collection('classes').doc(classId).delete();
+    this.classes.delete(classId);
+    return Promise.resolve();
   }
 
-  // Material CRUD operations
+  // Material CRUD operations (in-memory)
   createMaterial(material: Material) {
-    return this.firestore.collection('materials').add(material);
+    const id = 'mat_' + Date.now();
+    this.materials.set(id, { ...material, id });
+    return Promise.resolve({ id });
   }
 
-  getMaterials() {
-    return this.firestore.collection<Material>('materials').valueChanges();
+  getMaterials(): Observable<Material[]> {
+    return of(Array.from(this.materials.values()));
   }
 
-  getMaterial(materialId: string) {
-    return this.firestore.collection('materials').doc(materialId).valueChanges();
+  getMaterial(materialId: string): Observable<Material | undefined> {
+    return of(this.materials.get(materialId));
   }
 
   updateMaterial(materialId: string, material: Material) {
-    return this.firestore.collection('materials').doc(materialId).update(material);
+    this.materials.set(materialId, material);
+    return Promise.resolve();
   }
 
   deleteMaterial(materialId: string) {
-    return this.firestore.collection('materials').doc(materialId).delete();
+    this.materials.delete(materialId);
+    return Promise.resolve();
   }
 }

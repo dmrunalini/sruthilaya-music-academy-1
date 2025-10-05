@@ -1,34 +1,39 @@
 import { Injectable } from '@angular/core';
-import { AngularFireAuth } from '@angular/fire/auth';
 import { Router } from '@angular/router';
 import { User } from '../models/user.model';
 
+// Lightweight in-memory AuthService stub for local development.
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
+  private users = new Map<string, { password: string; details: User }>();
   userData: User | null = null;
 
-  constructor(private afAuth: AngularFireAuth, private router: Router) {
-    this.afAuth.authState.subscribe(user => {
-      this.userData = user ? user : null;
-    });
-  }
+  constructor(private router: Router) {}
 
   async signup(email: string, password: string, userDetails: User): Promise<void> {
-    const userCredential = await this.afAuth.createUserWithEmailAndPassword(email, password);
-    this.userData = { ...userDetails, uid: userCredential.user?.uid };
-    // Save user data to Firestore or any other database
+    console.log('[AuthService] signup called', { email, userDetails });
+    if (this.users.has(email)) {
+      console.warn('[AuthService] signup failed: user exists', email);
+      throw new Error('User already exists');
+    }
+    this.users.set(email, { password, details: userDetails });
+    this.userData = { ...userDetails, uid: email } as User;
+    console.log('[AuthService] signup completed for', email);
   }
 
   async login(email: string, password: string): Promise<void> {
-    await this.afAuth.signInWithEmailAndPassword(email, password);
-    this.router.navigate(['/dashboard']); // Redirect to dashboard or home page
+    const u = this.users.get(email);
+    if (!u || u.password !== password) {
+      throw new Error('Invalid credentials');
+    }
+    this.userData = { ...u.details, uid: email } as User;
   }
 
   async logout(): Promise<void> {
-    await this.afAuth.signOut();
-    this.router.navigate(['/login']); // Redirect to login page
+    this.userData = null;
+    this.router.navigate(['/login']);
   }
 
   isLoggedIn(): boolean {

@@ -1,23 +1,22 @@
 import { Injectable } from '@angular/core';
-import { AngularFireMessaging } from '@angular/fire/messaging';
-import { Observable } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { of, Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class PushNotificationsService {
-  constructor(private afMessaging: AngularFireMessaging) {}
+  constructor() {}
 
-  requestPermission(): Observable<any> {
-    return this.afMessaging.requestToken.pipe(
-      tap(token => {
-        console.log('Permission granted! Save to the server!', token);
-      })
-    );
+  // Simple stub: returns an empty notifications array and no-op permission.
+  requestPermission(): Observable<null> {
+    return of(null);
   }
 
   receiveMessage(): Observable<any> {
-    return this.afMessaging.messages;
+    return of(null);
+  }
+
+  getNotifications(): Observable<string[]> {
+    return of([]);
   }
 }

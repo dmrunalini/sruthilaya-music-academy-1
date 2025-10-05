@@ -16,8 +16,8 @@ export class CalendarComponent implements OnInit {
   }
 
   loadSchedule(): void {
-    this.calendarService.getSchedule().subscribe(data => {
-      this.schedule = data;
+    this.calendarService.getClasses().subscribe(data => {
+      this.schedule = data as any[];
     });
   }
 }
