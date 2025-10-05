@@ -17,7 +17,7 @@ Sruthilaya Music Academy is an Angular-based web application designed to facilit
 
 ## Project Structure
 ```
-sruthilaya-music-academy
+sruthilaya-music-academy-1
 ├── src
 │   ├── app
 │   │   ├── core
@@ -50,7 +50,7 @@ sruthilaya-music-academy
    ```
 2. Navigate to the project directory:
    ```
-   cd sruthilaya-music-academy
+   cd sruthilaya-music-academy-1
    ```
 3. Install dependencies:
    ```
