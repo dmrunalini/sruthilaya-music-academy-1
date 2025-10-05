@@ -26,4 +26,19 @@
     "firebase": "^12.3.0",
     "typescript": "~5.8.3"
   }
+  ,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dmrunalini/sruthilaya-music-academy-1.git"
+  },
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "test": "ng test",
+    "lint": "ng lint",
+    "e2e": "ng e2e",
+    "seed": "node scripts/seedFirestore.js",
+    "git-commit": "git add -A && git commit -m \"chore: update package.json\" || echo 'Nothing to commit'"
+  }
 }
