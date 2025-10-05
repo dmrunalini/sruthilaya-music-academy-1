@@ -4,6 +4,7 @@ import { User } from '../models/user.model';
 import { auth, db } from '../firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User as FirebaseUser } from 'firebase/auth';
 import { setDoc, doc } from 'firebase/firestore';
+import { FirestoreService } from './firestore.service';
 
 @Injectable({
   providedIn: 'root'
@@ -11,11 +12,18 @@ import { setDoc, doc } from 'firebase/firestore';
 export class AuthService {
   userData: User | null = null;
 
-  constructor(private router: Router) {
-    // Listen to auth state changes
+  constructor(private router: Router, private firestoreService: FirestoreService) {
+    // Listen to auth state changes and load Firestore profile (to get role)
     auth.onAuthStateChanged((u: FirebaseUser | null) => {
       if (u) {
-        this.userData = { uid: u.uid, email: u.email } as User;
+        // load profile from Firestore
+        this.firestoreService.getUser(u.uid).subscribe(profile => {
+          if (profile) {
+            this.userData = { ...profile, uid: u.uid, email: u.email } as User;
+          } else {
+            this.userData = { uid: u.uid, email: u.email } as User;
+          }
+        });
       } else {
         this.userData = null;
       }

@@ -1,6 +1,6 @@
 <nav class="navbar">
   <a routerLink="/">Home</a>
-  <a routerLink="/classes">Classes</a>
+  <!-- Classes link intentionally hidden from navbar; access classes via direct route or dashboard -->
   <span class="spacer"></span>
   <ng-container *ngIf="!isLoggedIn(); else logged">
     <a routerLink="/login">Login</a>

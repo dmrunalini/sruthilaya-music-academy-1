@@ -1,6 +1,14 @@
 <div class="class-list">
   <h2>Classes</h2>
+  <div *ngIf="isTeacher" class="add-class">
+    <input [(ngModel)]="newClassName" placeholder="New class name" />
+    <button (click)="addClass()">Add class</button>
+  </div>
+
   <ul>
-    <li *ngFor="let cls of classes">{{ cls.name }}</li>
+    <li *ngFor="let cls of classes">
+      {{ cls.subject || cls.name }}
+      <button *ngIf="isTeacher" (click)="removeClass(cls.id)">Delete</button>
+    </li>
   </ul>
 </div>

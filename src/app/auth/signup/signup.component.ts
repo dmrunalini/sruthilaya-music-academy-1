@@ -24,6 +24,7 @@ export class SignupComponent {
       phone: ['', Validators.required],
       age: ['', Validators.required],
       gender: ['', Validators.required],
+      role: ['student', Validators.required],
       teamsLink: ['']
     });
   }
@@ -34,9 +35,9 @@ export class SignupComponent {
     if (this.signupForm.valid) {
       this.isSubmitting = true;
       try {
-        const { name, email, password, phone, age, gender, teamsLink } = this.signupForm.value;
-        console.log('Calling AuthService.signup with', { email, password, details: { name, email, phone, age, gender, teamsLink } });
-        await this.authService.signup(email, password, { name, email, phone, age, gender, teamsLink } as any);
+  const { name, email, password, phone, age, gender, teamsLink, role } = this.signupForm.value;
+  console.log('Calling AuthService.signup with', { email, password, details: { name, email, phone, age, gender, teamsLink, role } });
+  await this.authService.signup(email, password, { name, email, phone, age, gender, teamsLink, role } as any);
   console.log('Signup successful for', email);
   this.router.navigate(['/classes']);
       } catch (err: any) {
