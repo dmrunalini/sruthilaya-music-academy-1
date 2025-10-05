@@ -55,11 +55,11 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
-            "browserTarget": "sruthilaya-music-academy-1:build"
+            "buildTarget": "sruthilaya-music-academy-1:build"
           },
           "configurations": {
             "production": {
-              "browserTarget": "sruthilaya-music-academy-1:build:production"
+              "buildTarget": "sruthilaya-music-academy-1:build:production"
             }
           }
         },
