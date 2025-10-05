@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, from, map, firstValueFrom } from 'rxjs';
 import { FirestoreService } from './firestore.service';
 import { Class } from '../models/class.model';
 
@@ -13,16 +13,16 @@ export class CalendarService {
     return this.firestore.getClasses();
   }
 
-  addClass(newClass: Class): Promise<void> {
-    return this.firestore.createClass(newClass).then(() => undefined);
+  async addClass(newClass: Class): Promise<void> {
+    await firstValueFrom(from(this.firestore.createClass(newClass)).pipe(map(() => undefined)));
   }
 
-  updateClass(updatedClass: Class): Promise<void> {
-    return this.firestore.updateClass(updatedClass.id!, updatedClass);
+  async updateClass(updatedClass: Class): Promise<void> {
+    await firstValueFrom(from(this.firestore.updateClass(updatedClass.id!, updatedClass)));
   }
 
-  deleteClass(classId: string): Promise<void> {
-    return this.firestore.deleteClass(classId);
+  async deleteClass(classId: string): Promise<void> {
+    await firstValueFrom(from(this.firestore.deleteClass(classId)));
   }
 
   getClassById(classId: string): Observable<Class | undefined> {

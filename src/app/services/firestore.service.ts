@@ -1,87 +1,82 @@
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { from, Observable } from 'rxjs';
 import { User } from '../models/user.model';
 import { Class } from '../models/class.model';
 import { Material } from '../models/material.model';
+import { db } from '../firebase';
+import { collection, addDoc, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 @Injectable({
   providedIn: 'root'
 })
 export class FirestoreService {
-  private users = new Map<string, User>();
-  private classes = new Map<string, Class>();
-  private materials = new Map<string, Material>();
+  constructor() {}
 
-  constructor() { }
+  // Users
+  async createUser(user: User) {
+    const ref = await addDoc(collection(db, 'users'), user as any);
+    return { id: ref.id };
+  }
 
-  // User CRUD operations (in-memory)
-  createUser(user: User) {
-    const id = (user.email || 'user') + '_' + Date.now();
-    this.users.set(id, { ...user });
-    return Promise.resolve({ id });
+  // Create a user document with a specified uid (useful when syncing with Auth uid)
+  async createUserWithId(uid: string, user: User) {
+    await setDoc(doc(db, 'users', uid), user as any);
+    return { id: uid };
   }
 
   getUser(userId: string): Observable<User | undefined> {
-    return of(this.users.get(userId));
+    return from(getDoc(doc(db, 'users', userId)).then(s => s.exists() ? (s.data() as User) : undefined));
   }
 
   updateUser(userId: string, user: User) {
-    this.users.set(userId, user);
-    return Promise.resolve();
+    return from(updateDoc(doc(db, 'users', userId), user as any));
   }
 
   deleteUser(userId: string) {
-    this.users.delete(userId);
-    return Promise.resolve();
+    return from(deleteDoc(doc(db, 'users', userId)));
   }
 
-  // Class CRUD operations (in-memory)
-  createClass(classData: Class) {
-    const id = 'class_' + Date.now();
-    this.classes.set(id, { ...classData, id });
-    return Promise.resolve({ id });
+  // Classes
+  async createClass(classData: Class) {
+    const ref = await addDoc(collection(db, 'classes'), classData as any);
+    return { id: ref.id };
   }
 
   getClasses(): Observable<Class[]> {
-    return of(Array.from(this.classes.values()));
+    return from(getDocs(collection(db, 'classes')).then(snap => snap.docs.map(d => ({ id: d.id, ...(d.data() as any) } as Class))));
   }
 
   getClass(classId: string): Observable<Class | undefined> {
-    return of(this.classes.get(classId));
+    return from(getDoc(doc(db, 'classes', classId)).then(s => s.exists() ? (s.data() as Class) : undefined));
   }
 
   updateClass(classId: string, classData: Class) {
-    this.classes.set(classId, classData);
-    return Promise.resolve();
+    return from(updateDoc(doc(db, 'classes', classId), classData as any));
   }
 
   deleteClass(classId: string) {
-    this.classes.delete(classId);
-    return Promise.resolve();
+    return from(deleteDoc(doc(db, 'classes', classId)));
   }
 
-  // Material CRUD operations (in-memory)
-  createMaterial(material: Material) {
-    const id = 'mat_' + Date.now();
-    this.materials.set(id, { ...material, id });
-    return Promise.resolve({ id });
+  // Materials
+  async createMaterial(material: Material) {
+    const ref = await addDoc(collection(db, 'materials'), material as any);
+    return { id: ref.id };
   }
 
   getMaterials(): Observable<Material[]> {
-    return of(Array.from(this.materials.values()));
+    return from(getDocs(collection(db, 'materials')).then(snap => snap.docs.map(d => ({ id: d.id, ...(d.data() as any) } as Material))));
   }
 
   getMaterial(materialId: string): Observable<Material | undefined> {
-    return of(this.materials.get(materialId));
+    return from(getDoc(doc(db, 'materials', materialId)).then(s => s.exists() ? (s.data() as Material) : undefined));
   }
 
   updateMaterial(materialId: string, material: Material) {
-    this.materials.set(materialId, material);
-    return Promise.resolve();
+    return from(updateDoc(doc(db, 'materials', materialId), material as any));
   }
 
   deleteMaterial(materialId: string) {
-    this.materials.delete(materialId);
-    return Promise.resolve();
+    return from(deleteDoc(doc(db, 'materials', materialId)));
   }
 }

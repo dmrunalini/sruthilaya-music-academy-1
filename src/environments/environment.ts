@@ -1,7 +1,7 @@
 export const environment = {
   production: false,
   firebaseConfig: {
-    apiKey: "YOUR_AAIzaSyDLxwLBap9UUHytgLboQjZkxYTWeIwWpgkPI_KEY",
+    apiKey: "AIzaSyDLxwLBap9UUHytgLboQjZkxYTWeIwWpgk",
     authDomain: "sruthilaya-music-academy-1.firebaseapp.com",
     projectId: "sruthilaya-music-academy-1",
     storageBucket: "sruthilaya-music-academy-1.firebasestorage.app",

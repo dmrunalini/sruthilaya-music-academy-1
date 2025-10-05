@@ -1,38 +1,56 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { User } from '../models/user.model';
+import { auth, db } from '../firebase';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User as FirebaseUser } from 'firebase/auth';
+import { setDoc, doc } from 'firebase/firestore';
 
-// Lightweight in-memory AuthService stub for local development.
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private users = new Map<string, { password: string; details: User }>();
   userData: User | null = null;
 
-  constructor(private router: Router) {}
+  constructor(private router: Router) {
+    // Listen to auth state changes
+    auth.onAuthStateChanged((u: FirebaseUser | null) => {
+      if (u) {
+        this.userData = { uid: u.uid, email: u.email } as User;
+      } else {
+        this.userData = null;
+      }
+    });
+  }
 
   async signup(email: string, password: string, userDetails: User): Promise<void> {
-    console.log('[AuthService] signup called', { email, userDetails });
-    if (this.users.has(email)) {
-      console.warn('[AuthService] signup failed: user exists', email);
-      throw new Error('User already exists');
+    const credential = await createUserWithEmailAndPassword(auth, email, password);
+    const uid = credential.user.uid;
+    this.userData = { ...userDetails, uid, email } as User;
+    // Persist profile in Firestore with defensive logging for debugging permission / network errors
+    try {
+      await setDoc(doc(db, 'users', uid), this.userData as any);
+      console.log('Firestore: successfully wrote user profile', { uid, user: this.userData });
+    } catch (err: any) {
+      // Log useful parts of the Firebase error for debugging in the browser console
+      console.error('Firestore: error writing user profile', {
+        uid,
+        user: this.userData,
+        name: err?.name,
+        code: err?.code,
+        message: err?.message,
+        stack: err?.stack
+      });
+      throw err;
     }
-    this.users.set(email, { password, details: userDetails });
-    this.userData = { ...userDetails, uid: email } as User;
-    console.log('[AuthService] signup completed for', email);
   }
 
   async login(email: string, password: string): Promise<void> {
-    const u = this.users.get(email);
-    if (!u || u.password !== password) {
-      throw new Error('Invalid credentials');
-    }
-    this.userData = { ...u.details, uid: email } as User;
+    await signInWithEmailAndPassword(auth, email, password);
+    // onAuthStateChanged will update userData
   }
 
   async logout(): Promise<void> {
-    this.userData = null;
+    await signOut(auth);
     this.router.navigate(['/login']);
   }
 
