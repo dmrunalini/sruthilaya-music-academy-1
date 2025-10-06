@@ -22,7 +22,7 @@ interface Slot {
 export class CalendarComponent implements OnInit {
   // simple week view starting today
   days: Date[] = [];
-  hours = [9, 10, 11, 12, 13, 14, 15, 16];
+  hours = Array.from({ length: 24 }, (_, i) => i); // 0..23
   slots: Slot[][] = [];
   classes: any[] = [];
   users: any[] = [];
@@ -33,14 +33,15 @@ export class CalendarComponent implements OnInit {
 
   constructor(private calendarService: CalendarService, private firestore: FirestoreService, private auth: AuthService) {}
 
+  // week navigation state
+  startOfWeek = new Date();
+  minWeekOffset = -52; // up to 1 year back
+  maxWeekOffset = 52; // up to 1 year forward
+  currentWeekOffset = 0;
+
   ngOnInit(): void {
-    // build next 7 days
     console.log('CalendarComponent: ngOnInit');
-    for (let i = 0; i < 7; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() + i);
-      this.days.push(d);
-    }
+    this.setWeekOffset(0);
     this.buildSlots();
     this.loadData();
     const user = this.auth.getUserData();
@@ -48,10 +49,35 @@ export class CalendarComponent implements OnInit {
     this.auth.user$.subscribe(u => this.isTeacher = !!(u && u.role === 'teacher'));
   }
 
+  // Human-friendly week range for header, e.g. "Oct 6 - 12, 2025" or "Oct 28 - Nov 3, 2025"
+  get weekRange(): string {
+    if (!this.days || this.days.length < 7) return '';
+    const start = this.days[0];
+    const end = this.days[6];
+    if (!start || !end) return '';
+
+    const startMonth = start.toLocaleString('en-US', { month: 'short' });
+    const endMonth = end.toLocaleString('en-US', { month: 'short' });
+    const startDay = start.getDate();
+    const endDay = end.getDate();
+    const startYear = start.getFullYear();
+    const endYear = end.getFullYear();
+
+    if (startYear === endYear) {
+      if (startMonth === endMonth) {
+        // Same month and year: "Oct 6 - 12, 2025"
+        return `${startMonth} ${startDay} - ${endDay}, ${startYear}`;
+      } else {
+        // Same year, different months: "Oct 28 - Nov 3, 2025"
+        return `${startMonth} ${startDay} - ${endMonth} ${endDay}, ${startYear}`;
+      }
+    }
+    // Different years: "Dec 30, 2025 - Jan 5, 2026"
+    return `${startMonth} ${startDay}, ${startYear} - ${endMonth} ${endDay}, ${endYear}`;
+  }
+
   buildSlots() {
-    this.slots = this.hours.map(h => {
-      return this.days.map(d => ({ date: new Date(d.getFullYear(), d.getMonth(), d.getDate(), h) }));
-    });
+    this.slots = this.hours.map(h => this.days.map(d => ({ date: new Date(d.getFullYear(), d.getMonth(), d.getDate(), h) })));
   }
 
   loadData() {
@@ -65,6 +91,47 @@ export class CalendarComponent implements OnInit {
       console.log('CalendarComponent: loaded users', u);
       this.users = (u || []).filter(x => x.role !== 'teacher');
     });
+  }
+
+  // week navigation helpers
+  private startOfWeekDate(base: Date) {
+    const d = new Date(base);
+    const day = d.getDay(); // 0 Sun .. 6 Sat
+    const diff = (day + 6) % 7; // days since Monday
+    d.setDate(d.getDate() - diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  setWeekOffset(offset: number) {
+    if (offset < this.minWeekOffset) offset = this.minWeekOffset;
+    if (offset > this.maxWeekOffset) offset = this.maxWeekOffset;
+    this.currentWeekOffset = offset;
+    const base = new Date();
+    base.setDate(base.getDate() + offset * 7);
+    this.days = [];
+    const sow = this.startOfWeekDate(base);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(sow);
+      d.setDate(sow.getDate() + i);
+      this.days.push(d);
+    }
+    this.buildSlots();
+  }
+
+  prevWeek() {
+    this.setWeekOffset(this.currentWeekOffset - 1);
+    this.loadData();
+  }
+
+  nextWeek() {
+    this.setWeekOffset(this.currentWeekOffset + 1);
+    this.loadData();
+  }
+
+  goToCurrentWeek() {
+    this.setWeekOffset(0);
+    this.loadData();
   }
 
   mapClassesToSlots() {

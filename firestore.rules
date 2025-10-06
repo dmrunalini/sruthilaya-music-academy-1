@@ -24,11 +24,12 @@ service cloud.firestore {
       // any authenticated user can read classes
       allow read: if request.auth != null;
 
-      // create: only an authenticated teacher may create a class, and the teacherId in the new document
-      // must match the authenticated user's uid
-      allow create: if request.auth != null
-                    && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher'
-                    && request.auth.uid == request.resource.data.teacherId;
+  // create: only an authenticated teacher may create a class, and the teacherId in the new document
+  // must match the authenticated user's uid. This ensures only accounts with role == 'teacher'
+  // (stored in users/{uid}) can create class documents for themselves.
+  allow create: if request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher'
+        && request.auth.uid == request.resource.data.teacherId;
 
       // update & delete: only the teacher who owns the class may change or delete it
       allow update, delete: if request.auth != null

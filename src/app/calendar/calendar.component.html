@@ -1,25 +1,33 @@
 <div class="calendar">
-  <h2>Calendar (Week)</h2>
-  <table class="calendar-table">
-    <thead>
-      <tr>
-        <th></th>
-        <th *ngFor="let d of days">{{ d | date: 'EEE dd' }}</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let h of hours; let hi = index">
-        <td class="hour-cell">{{ h }}:00</td>
-        <td *ngFor="let d of days; let di = index" (click)="onSlotClick(slots[hi][di])" [class.occupied]="slots[hi][di].classId">
-          <div *ngIf="slots[hi][di].classInfo">
-            <strong>{{ slots[hi][di].classInfo.subject }}</strong>
-            <div>{{ slots[hi][di].classInfo.studentName }}</div>
-          </div>
-          <div *ngIf="!slots[hi][di].classInfo">(empty)</div>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+  <div class="calendar-header">
+    <button (click)="prevWeek()">⟨ Prev</button>
+  <div class="month">{{ weekRange }}</div>
+    <button (click)="nextWeek()">Next ⟩</button>
+    <button (click)="goToCurrentWeek()">Today</button>
+  </div>
+
+  <div class="calendar-table-wrap">
+    <table class="calendar-table">
+      <thead>
+        <tr>
+          <th class="hour-col"></th>
+          <th *ngFor="let d of days" class="day-col">{{ d | date: 'EEE dd' }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let h of hours; let hi = index">
+          <td class="hour-cell">{{ h }}:00</td>
+          <td *ngFor="let d of days; let di = index" (click)="onSlotClick(slots[hi][di])" [class.occupied]="slots[hi][di].classId">
+            <div *ngIf="slots[hi][di].classInfo" class="slot-filled">
+              <div class="subject">{{ slots[hi][di].classInfo.subject }}</div>
+              <div class="student">{{ slots[hi][di].classInfo.studentName }}</div>
+            </div>
+            <div *ngIf="!slots[hi][di].classInfo" class="slot-empty">(empty)</div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 
   <div *ngIf="editingSlot" class="assign-panel">
     <h3>Assign Class - {{ editingSlot.date | date: 'EEE dd, h:mm a' }}</h3>

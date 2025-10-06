@@ -30,6 +30,7 @@ export class AuthService {
         });
       } else {
         this.userData = null;
+        this.userSubject.next(null);
       }
     });
   }
@@ -70,7 +71,8 @@ export class AuthService {
   }
 
   isLoggedIn(): boolean {
-    return this.userData !== null;
+    // Consider the user logged in if we have a cached profile or if Firebase reports a currentUser
+    return this.userData !== null || !!auth.currentUser;
   }
 
   getUserData(): User | null {

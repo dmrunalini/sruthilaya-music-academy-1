@@ -4,7 +4,7 @@ import { User } from '../models/user.model';
 import { Class } from '../models/class.model';
 import { Material } from '../models/material.model';
 import { db } from '../firebase';
-import { collection, addDoc, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
 
 @Injectable({
   providedIn: 'root'
@@ -29,7 +29,15 @@ export class FirestoreService {
   }
 
   getUsers(): Observable<User[]> {
-    return from(getDocs(collection(db, 'users')).then(snap => snap.docs.map(d => ({ uid: d.id, ...(d.data() as any) } as User))));
+    // real-time users stream
+    return new Observable<User[]>(subscriber => {
+      const q = query(collection(db, 'users'), orderBy('name'));
+      const unsub = onSnapshot(q, snap => {
+        const users = snap.docs.map(d => ({ uid: d.id, ...(d.data() as any) } as User));
+        subscriber.next(users);
+      }, err => subscriber.error(err));
+      return () => unsub();
+    });
   }
 
   updateUser(userId: string, user: User) {
@@ -47,16 +55,24 @@ export class FirestoreService {
   }
 
   getClasses(): Observable<Class[]> {
-    return from(getDocs(collection(db, 'classes')).then(snap => snap.docs.map(d => {
-      const raw = d.data() as any;
-      // normalize classDate to JS Date when Firestore returns a Timestamp
-      if (raw && raw.classDate && typeof raw.classDate.toDate === 'function') {
-        raw.classDate = raw.classDate.toDate();
-      } else if (raw && raw.classDate) {
-        raw.classDate = new Date(raw.classDate);
-      }
-      return ({ id: d.id, ...raw } as Class);
-    })));
+    // real-time classes stream
+    return new Observable<Class[]>(subscriber => {
+      const q = query(collection(db, 'classes'), orderBy('classDate'));
+      const unsub = onSnapshot(q, snap => {
+        const classes = snap.docs.map(d => {
+          const raw = d.data() as any;
+          // normalize classDate to JS Date when Firestore returns a Timestamp
+          if (raw && raw.classDate && typeof raw.classDate.toDate === 'function') {
+            raw.classDate = raw.classDate.toDate();
+          } else if (raw && raw.classDate) {
+            raw.classDate = new Date(raw.classDate);
+          }
+          return ({ id: d.id, ...raw } as Class);
+        });
+        subscriber.next(classes);
+      }, err => subscriber.error(err));
+      return () => unsub();
+    });
   }
 
   getClass(classId: string): Observable<Class | undefined> {

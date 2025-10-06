@@ -17,6 +17,10 @@ export class NavbarComponent {
     return this.authService.isLoggedIn();
   }
 
+  get homeLink(): string {
+    return this.authService.isLoggedIn() ? '/calendar' : '/login';
+  }
+
   logout() {
     this.authService.logout();
   }

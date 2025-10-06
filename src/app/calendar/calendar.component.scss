@@ -1,1 +1,71 @@
-/* empty placeholder */
+.calendar {
+	padding: 1rem;
+	.calendar-header {
+		display: flex;
+		gap: 1rem;
+		align-items: center;
+		justify-content: center;
+		margin-bottom: 0.5rem;
+	}
+
+	.calendar-table-wrap {
+		overflow: auto;
+		max-width: 100%;
+		border: 1px solid #ddd;
+	}
+
+	.calendar-table {
+		width: 100%;
+		border-collapse: collapse;
+		text-align: left;
+	}
+
+	.calendar-table th,
+	.calendar-table td {
+		border: 1px solid #eee;
+		padding: 6px 8px;
+		vertical-align: top;
+		min-width: 140px;
+	}
+
+	.hour-col {
+		width: 60px;
+		text-align: center;
+		background: #fafafa;
+	}
+
+	.hour-cell {
+		width: 60px;
+		text-align: center;
+		background: #fafafa;
+		font-size: 12px;
+	}
+
+	.slot-filled {
+		background: #f0f7ff;
+		padding: 4px;
+		border-radius: 4px;
+	}
+
+	.subject {
+		font-weight: 600;
+		margin-bottom: 4px;
+	}
+
+	.student {
+		font-size: 13px;
+		color: #333;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: 120px;
+	}
+
+	.assign-panel {
+		margin-top: 1rem;
+		padding: 0.75rem;
+		border: 1px solid #ddd;
+		background: #fff;
+		max-width: 480px;
+	}
+}
