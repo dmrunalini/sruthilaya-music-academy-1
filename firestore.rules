@@ -6,15 +6,34 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Allow each authenticated user to read/write only their own profile document
+    // Allow each authenticated user to read their own profile, and allow teachers to read other users
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // read: either the owner or any authenticated teacher can read
+      allow read: if request.auth != null && (
+        request.auth.uid == userId ||
+        // check requester's role is teacher by reading their own profile
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher'
+      );
+
+      // write: only the owner may write their profile
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
     // Example: allow authenticated users to read classes
     match /classes/{classId} {
+      // any authenticated user can read classes
       allow read: if request.auth != null;
-      // allow write: if request.auth.token.admin == true;
+
+      // create: only an authenticated teacher may create a class, and the teacherId in the new document
+      // must match the authenticated user's uid
+      allow create: if request.auth != null
+                    && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher'
+                    && request.auth.uid == request.resource.data.teacherId;
+
+      // update & delete: only the teacher who owns the class may change or delete it
+      allow update, delete: if request.auth != null
+                            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher'
+                            && request.auth.uid == resource.data.teacherId;
     }
 
     // Add additional collection rules below as needed

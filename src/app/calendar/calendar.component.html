@@ -1,4 +1,38 @@
 <div class="calendar">
-  <h2>Calendar</h2>
-  <p>Schedule will appear here.</p>
+  <h2>Calendar (Week)</h2>
+  <table class="calendar-table">
+    <thead>
+      <tr>
+        <th></th>
+        <th *ngFor="let d of days">{{ d | date: 'EEE dd' }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let h of hours; let hi = index">
+        <td class="hour-cell">{{ h }}:00</td>
+        <td *ngFor="let d of days; let di = index" (click)="onSlotClick(slots[hi][di])" [class.occupied]="slots[hi][di].classId">
+          <div *ngIf="slots[hi][di].classInfo">
+            <strong>{{ slots[hi][di].classInfo.subject }}</strong>
+            <div>{{ slots[hi][di].classInfo.studentName }}</div>
+          </div>
+          <div *ngIf="!slots[hi][di].classInfo">(empty)</div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div *ngIf="editingSlot" class="assign-panel">
+    <h3>Assign Class - {{ editingSlot.date | date: 'EEE dd, h:mm a' }}</h3>
+    <label>Student</label>
+    <select [(ngModel)]="selectedStudentUid">
+      <option value="">Select student</option>
+      <option *ngFor="let s of users" [value]="s.uid">{{ s.name }}</option>
+    </select>
+
+    <label>Subject</label>
+    <input type="text" [(ngModel)]="selectedSubject" />
+
+    <button (click)="assignClass()">Save</button>
+    <button (click)="editingSlot = null">Cancel</button>
+  </div>
 </div>

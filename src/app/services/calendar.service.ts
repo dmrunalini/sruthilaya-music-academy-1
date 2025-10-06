@@ -13,8 +13,9 @@ export class CalendarService {
     return this.firestore.getClasses();
   }
 
-  async addClass(newClass: Class): Promise<void> {
-    await firstValueFrom(from(this.firestore.createClass(newClass)).pipe(map(() => undefined)));
+  async addClass(newClass: Class): Promise<any> {
+    const res: any = await firstValueFrom(from(this.firestore.createClass(newClass)));
+    return res;
   }
 
   async updateClass(updatedClass: Class): Promise<void> {

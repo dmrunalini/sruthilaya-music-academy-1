@@ -1,8 +1,8 @@
 <div class="class-list">
   <h2>Classes</h2>
   <div *ngIf="isTeacher" class="add-class">
-    <input [(ngModel)]="newClassName" placeholder="New class name" />
-    <button (click)="addClass()">Add class</button>
+  <input #newClassInput type="text" [(ngModel)]="newClassName" placeholder="New class name" />
+  <button (click)="addClass()" [disabled]="isSubmitting">Add class</button>
   </div>
 
   <ul>

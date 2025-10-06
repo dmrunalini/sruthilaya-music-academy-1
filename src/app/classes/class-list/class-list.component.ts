@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { FirestoreService } from '../../services/firestore.service';
 import { Class } from '../../models/class.model';
 import { AuthService } from '../../services/auth.service';
@@ -16,6 +16,8 @@ export class ClassListComponent implements OnInit {
   classes: Class[] = [];
   isTeacher = false;
   newClassName = '';
+  isSubmitting = false;
+  @ViewChild('newClassInput', { static: false }) newClassInput?: ElementRef<HTMLInputElement>;
 
   constructor(private firestoreService: FirestoreService, private authService: AuthService) {}
 
@@ -23,6 +25,10 @@ export class ClassListComponent implements OnInit {
     this.loadClasses();
     const user = this.authService.getUserData();
     this.isTeacher = !!(user && user.role === 'teacher');
+    // react to auth/profile changes
+    this.authService.user$.subscribe(u => {
+      this.isTeacher = !!(u && u.role === 'teacher');
+    });
   }
 
   loadClasses(): void {
@@ -32,8 +38,23 @@ export class ClassListComponent implements OnInit {
   }
 
   async addClass() {
-    if (!this.isTeacher || !this.newClassName) return;
+    console.log('addClass clicked', { isTeacher: this.isTeacher, newClassName: this.newClassName });
+    if (!this.isTeacher) {
+      console.warn('addClass: current user is not a teacher');
+      return;
+    }
+    // Fallback: if ngModel didn't populate, read value from input element
+    if ((!this.newClassName || this.newClassName.trim().length === 0) && this.newClassInput) {
+      const val = this.newClassInput.nativeElement.value;
+      console.log('addClass: read fallback value from input', val);
+      this.newClassName = val || '';
+    }
+    if (!this.newClassName || this.newClassName.trim().length === 0) {
+      console.warn('addClass: newClassName is empty');
+      return;
+    }
     const user = this.authService.getUserData();
+    this.isSubmitting = true;
     const classData: Partial<Class> = {
       studentName: '',
       name: this.newClassName as any,
@@ -43,6 +64,7 @@ export class ClassListComponent implements OnInit {
       classDate: new Date()
     } as any;
     try {
+      console.log('addClass: creating class', classData);
       const res = await this.firestoreService.createClass(classData as any);
       console.log('Created class', res);
       this.newClassName = '';
@@ -50,6 +72,7 @@ export class ClassListComponent implements OnInit {
     } catch (err) {
       console.error('Error creating class', err);
     }
+    this.isSubmitting = false;
   }
 
   async removeClass(classId: string) {

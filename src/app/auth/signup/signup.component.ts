@@ -39,7 +39,8 @@ export class SignupComponent {
   console.log('Calling AuthService.signup with', { email, password, details: { name, email, phone, age, gender, teamsLink, role } });
   await this.authService.signup(email, password, { name, email, phone, age, gender, teamsLink, role } as any);
   console.log('Signup successful for', email);
-  this.router.navigate(['/classes']);
+  // Redirect based on role
+  this.router.navigate([role === 'teacher' ? '/calendar' : '/classes']);
       } catch (err: any) {
         console.error('Signup error', err);
         this.errorMessage = err?.message || 'Signup failed';

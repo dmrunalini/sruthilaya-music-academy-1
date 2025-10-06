@@ -5,12 +5,15 @@ import { auth, db } from '../firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User as FirebaseUser } from 'firebase/auth';
 import { setDoc, doc } from 'firebase/firestore';
 import { FirestoreService } from './firestore.service';
+import { BehaviorSubject } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
   userData: User | null = null;
+  private userSubject = new BehaviorSubject<User | null>(null);
+  user$ = this.userSubject.asObservable();
 
   constructor(private router: Router, private firestoreService: FirestoreService) {
     // Listen to auth state changes and load Firestore profile (to get role)
@@ -23,6 +26,7 @@ export class AuthService {
           } else {
             this.userData = { uid: u.uid, email: u.email } as User;
           }
+          this.userSubject.next(this.userData);
         });
       } else {
         this.userData = null;
@@ -38,6 +42,7 @@ export class AuthService {
     try {
       await setDoc(doc(db, 'users', uid), this.userData as any);
       console.log('Firestore: successfully wrote user profile', { uid, user: this.userData });
+      this.userSubject.next(this.userData);
     } catch (err: any) {
       // Log useful parts of the Firebase error for debugging in the browser console
       console.error('Firestore: error writing user profile', {
@@ -60,6 +65,8 @@ export class AuthService {
   async logout(): Promise<void> {
     await signOut(auth);
     this.router.navigate(['/login']);
+    this.userData = null;
+    this.userSubject.next(null);
   }
 
   isLoggedIn(): boolean {

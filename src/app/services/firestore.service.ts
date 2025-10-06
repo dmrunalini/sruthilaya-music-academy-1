@@ -28,6 +28,10 @@ export class FirestoreService {
     return from(getDoc(doc(db, 'users', userId)).then(s => s.exists() ? (s.data() as User) : undefined));
   }
 
+  getUsers(): Observable<User[]> {
+    return from(getDocs(collection(db, 'users')).then(snap => snap.docs.map(d => ({ uid: d.id, ...(d.data() as any) } as User))));
+  }
+
   updateUser(userId: string, user: User) {
     return from(updateDoc(doc(db, 'users', userId), user as any));
   }
@@ -43,7 +47,16 @@ export class FirestoreService {
   }
 
   getClasses(): Observable<Class[]> {
-    return from(getDocs(collection(db, 'classes')).then(snap => snap.docs.map(d => ({ id: d.id, ...(d.data() as any) } as Class))));
+    return from(getDocs(collection(db, 'classes')).then(snap => snap.docs.map(d => {
+      const raw = d.data() as any;
+      // normalize classDate to JS Date when Firestore returns a Timestamp
+      if (raw && raw.classDate && typeof raw.classDate.toDate === 'function') {
+        raw.classDate = raw.classDate.toDate();
+      } else if (raw && raw.classDate) {
+        raw.classDate = new Date(raw.classDate);
+      }
+      return ({ id: d.id, ...raw } as Class);
+    })));
   }
 
   getClass(classId: string): Observable<Class | undefined> {
