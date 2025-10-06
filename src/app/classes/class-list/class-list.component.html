@@ -7,7 +7,8 @@
 
   <ul>
     <li *ngFor="let cls of classes">
-      {{ cls.subject || cls.name }}
+      <div class="cls-subject">{{ cls.subject || cls.name }}</div>
+      <div class="cls-datetime">{{ cls.classDate | date: 'EEE, MMM d, h:mm a' }}</div>
       <button *ngIf="isTeacher" (click)="removeClass(cls.id)">Delete</button>
     </li>
   </ul>

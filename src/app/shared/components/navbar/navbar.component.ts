@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-navbar',
@@ -11,17 +12,37 @@ import { AuthService } from '../../../services/auth.service';
   imports: [CommonModule, RouterModule]
 })
 export class NavbarComponent {
-  constructor(private authService: AuthService) {}
+  private sub: Subscription | null = null;
+  homeLink = '/login';
+
+  constructor(private authService: AuthService) {
+    // initialize from cached profile if available
+    const user = this.authService.getUserData();
+    this.homeLink = user?.role === 'teacher' ? '/calendar' : (user?.role === 'student' ? '/classes' : '/login');
+
+    // react to changes in auth/profile
+    this.sub = this.authService.user$.subscribe(u => {
+      if (!u) {
+        this.homeLink = '/login';
+      } else if (u.role === 'teacher') {
+        this.homeLink = '/calendar';
+      } else if (u.role === 'student') {
+        this.homeLink = '/classes';
+      } else {
+        this.homeLink = '/login';
+      }
+    });
+  }
 
   isLoggedIn() {
     return this.authService.isLoggedIn();
   }
 
-  get homeLink(): string {
-    return this.authService.isLoggedIn() ? '/calendar' : '/login';
-  }
-
   logout() {
     this.authService.logout();
+  }
+
+  ngOnDestroy(): void {
+    this.sub?.unsubscribe();
   }
 }

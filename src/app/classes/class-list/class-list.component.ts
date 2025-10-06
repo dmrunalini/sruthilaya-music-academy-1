@@ -33,7 +33,12 @@ export class ClassListComponent implements OnInit {
 
   loadClasses(): void {
     this.firestoreService.getClasses().subscribe((data: Class[]) => {
-      this.classes = data;
+      // normalize and sort classes by earliest classDate first
+      this.classes = (data || []).map(c => ({ ...c, classDate: c.classDate ? new Date(c.classDate as any) : new Date(0) } as Class)).sort((a, b) => {
+        const da = new Date(a.classDate).getTime();
+        const db = new Date(b.classDate).getTime();
+        return da - db;
+      });
     });
   }
 

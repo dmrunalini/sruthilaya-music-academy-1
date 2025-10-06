@@ -11,7 +11,7 @@
 	.calendar-table-wrap {
 		overflow: auto;
 		max-width: 100%;
-		border: 1px solid #ddd;
+		border: 2px solid #bbb; /* thicker outer border */
 	}
 
 	.calendar-table {
@@ -22,8 +22,8 @@
 
 	.calendar-table th,
 	.calendar-table td {
-		border: 1px solid #eee;
-		padding: 6px 8px;
+		border: 2px solid #ddd; /* thicker cell borders */
+		padding: 8px 10px;
 		vertical-align: top;
 		min-width: 140px;
 	}
@@ -41,10 +41,21 @@
 		font-size: 12px;
 	}
 
+	/* visual for occupied slots */
 	.slot-filled {
-		background: #f0f7ff;
-		padding: 4px;
-		border-radius: 4px;
+		background: #ffecec; /* light red */
+		color: #800;
+		padding: 6px;
+		border-radius: 6px;
+		border: 2px solid #f08080;
+	}
+
+	/* visual for empty slots */
+	.slot-empty {
+		background: #ecffe8; /* light green */
+		min-height: 36px;
+		border-radius: 6px;
+		border: 2px dashed #7fd07f;
 	}
 
 	.subject {
