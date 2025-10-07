@@ -1,15 +1,24 @@
 <div class="class-list">
+  <div *ngIf="!isTeacher && displayName" class="welcome">Welcome, {{ displayName }}!</div>
   <h2>Classes</h2>
+  <div class="week-nav">
+    <button (click)="prevWeek()">⟨ Prev Week</button>
+    <div class="week-range">{{ days[0] | date: 'MMM d' }} - {{ days[6] | date: 'MMM d, yyyy' }}</div>
+    <button (click)="nextWeek()">Next Week ⟩</button>
+  </div>
   <div *ngIf="isTeacher" class="add-class">
   <input #newClassInput type="text" [(ngModel)]="newClassName" placeholder="New class name" />
   <button (click)="addClass()" [disabled]="isSubmitting">Add class</button>
   </div>
-
-  <ul>
-    <li *ngFor="let cls of classes">
-      <div class="cls-subject">{{ cls.subject || cls.name }}</div>
-      <div class="cls-datetime">{{ cls.classDate | date: 'EEE, MMM d, h:mm a' }}</div>
-      <button *ngIf="isTeacher" (click)="removeClass(cls.id)">Delete</button>
-    </li>
-  </ul>
+  <div *ngIf="visibleClasses && visibleClasses.length > 0; else empty">
+    <ul>
+      <li *ngFor="let cls of visibleClasses">
+    <div class="cls-datetime">{{ cls.classDate | date: 'EEE, MMM d, h:mm a' }}</div>
+        <button *ngIf="isTeacher" (click)="removeClass(cls.id)">Delete</button>
+      </li>
+    </ul>
+  </div>
+  <ng-template #empty>
+    <div class="empty-state">No classes this week</div>
+  </ng-template>
 </div>

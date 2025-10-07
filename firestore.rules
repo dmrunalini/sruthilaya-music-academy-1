@@ -37,6 +37,22 @@ service cloud.firestore {
                             && request.auth.uid == resource.data.teacherId;
     }
 
+    // Materials: allow authenticated users to read materials; only teachers may create/update/delete
+    match /materials/{materialId} {
+      // any authenticated user can read materials
+      allow read: if request.auth != null;
+
+      // create: only a user who has role == 'teacher' in users/{uid} and whose uid matches ownerUid
+      allow create: if request.auth != null
+                    && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher'
+                    && request.auth.uid == request.resource.data.ownerUid;
+
+      // update & delete: only the owning teacher may change or delete the material
+      allow update, delete: if request.auth != null
+                            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher'
+                            && request.auth.uid == resource.data.ownerUid;
+    }
+
     // Add additional collection rules below as needed
   }
 }

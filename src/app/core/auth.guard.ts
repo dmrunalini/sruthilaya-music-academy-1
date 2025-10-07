@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { CanActivate, ActivatedRouteSnapshot, RouterStateSnapshot, Router } from '@angular/router';
+import { CanActivate, ActivatedRouteSnapshot, RouterStateSnapshot, Router, UrlTree } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
 @Injectable({
@@ -11,11 +11,12 @@ export class AuthGuard implements CanActivate {
 
   canActivate(
     route: ActivatedRouteSnapshot,
-    state: RouterStateSnapshot): boolean {
-    const isAuthenticated = this.authService.isAuthenticated();
+    state: RouterStateSnapshot): boolean | UrlTree {
+    const isAuthenticated = this.authService.isLoggedIn();
     if (!isAuthenticated) {
-      this.router.navigate(['/login']);
+      // return a UrlTree instead of navigating directly to prevent the target route from initializing
+      return this.router.createUrlTree(['/login']);
     }
-    return isAuthenticated;
+    return true;
   }
 }

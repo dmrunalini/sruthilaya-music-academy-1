@@ -29,7 +29,7 @@ export class CalendarComponent implements OnInit {
   isTeacher = false;
   editingSlot: Slot | null = null;
   selectedStudentUid = '';
-  selectedSubject = '';
+  // subject removed; only studentName is used
 
   constructor(private calendarService: CalendarService, private firestore: FirestoreService, private auth: AuthService) {}
 
@@ -43,7 +43,10 @@ export class CalendarComponent implements OnInit {
     console.log('CalendarComponent: ngOnInit');
     this.setWeekOffset(0);
     this.buildSlots();
-    this.loadData();
+    // Only load data if we're authenticated — guard should stop anonymous access, but be defensive
+    if (this.auth.isLoggedIn()) {
+      this.loadData();
+    }
     const user = this.auth.getUserData();
     this.isTeacher = !!(user && user.role === 'teacher');
     this.auth.user$.subscribe(u => this.isTeacher = !!(u && u.role === 'teacher'));
@@ -157,7 +160,6 @@ export class CalendarComponent implements OnInit {
     if (slot.classId) return; // occupied
     this.editingSlot = slot;
     this.selectedStudentUid = '';
-    this.selectedSubject = '';
   }
 
   async assignClass() {
@@ -167,7 +169,8 @@ export class CalendarComponent implements OnInit {
     const currentUid = auth.currentUser?.uid || teacher?.uid || '';
     const newClass: any = {
       studentName: this.users.find(u => u.uid === this.selectedStudentUid)?.name || '',
-      subject: this.selectedSubject || 'Lesson',
+      studentUid: this.selectedStudentUid || null,
+      studentEmail: this.users.find(u => u.uid === this.selectedStudentUid)?.email || null,
       timeSlot: `${this.editingSlot.date.getHours()}:00`,
       teacherId: currentUid,
       classDate: this.editingSlot.date

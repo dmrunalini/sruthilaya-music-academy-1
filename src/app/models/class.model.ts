@@ -4,5 +4,8 @@ export interface Class {
     timeSlot: string;
     teacherId: string;
     classDate: Date;
-    subject: string;
+    // subject removed/optional — keep for backward compatibility
+    subject?: string;
+    // legacy name field (optional)
+    name?: string;
 }

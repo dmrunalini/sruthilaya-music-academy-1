@@ -1,1 +1,54 @@
+.materials-menu {
+	padding: 1rem;
+
+	.materials-top {
+		display: flex;
+		gap: 1rem;
+	}
+
+	.categories {
+		width: 200px;
+		border-right: 1px solid #eee;
+		padding-right: 1rem;
+	}
+
+	.categories ul {
+		list-style: none;
+		padding: 0;
+	}
+
+	.categories li {
+		padding: 6px 4px;
+		cursor: pointer;
+	}
+
+	.categories li.active {
+		background: #f0f7ff;
+		font-weight: 600;
+	}
+
+	.materials-list {
+		flex: 1;
+		padding-left: 1rem;
+	}
+
+	.create-material input, .create-material textarea { width: 100%; margin-bottom: 0.5rem; }
+
+	.material-item { padding: 0.6rem; border-bottom: 1px solid #eee; }
+	.material-item .title { font-weight: 700; }
+	.material-item .meta { color: #777; font-size: 0.9rem; }
+
+	.materials-table { width: 100%; border-collapse: collapse; }
+	.materials-table th, .materials-table td { padding: 8px 10px; border-bottom: 1px solid #eee; text-align: left; }
+	.materials-table thead th { background: #fafafa; font-weight: 700; }
+	.materials-table tbody tr:hover { background: #fbfbfb; }
+	.materials-table .open-link { margin-left: 8px; }
+
+	/* Modal */
+	.materials-modal { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; }
+	.materials-modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.4); }
+	.materials-modal-content { position: relative; background: #fff; padding: 1rem; width: 80%; max-width: 900px; max-height: 90%; overflow: auto; border-radius: 6px; box-shadow: 0 8px 30px rgba(0,0,0,0.2); }
+	.materials-modal-header { display:flex; justify-content:space-between; align-items:center; }
+	.materials-modal-body { margin-top: 0.5rem; }
+}
 /* empty placeholder */

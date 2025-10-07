@@ -19,7 +19,6 @@
           <td class="hour-cell">{{ h }}:00</td>
           <td *ngFor="let d of days; let di = index" (click)="onSlotClick(slots[hi][di])" [class.occupied]="slots[hi][di].classId">
             <div *ngIf="slots[hi][di].classInfo" class="slot-filled">
-              <div class="subject">{{ slots[hi][di].classInfo.subject }}</div>
               <div class="student">{{ slots[hi][di].classInfo.studentName }}</div>
             </div>
             <div *ngIf="!slots[hi][di].classInfo" class="slot-empty"></div>
@@ -37,10 +36,7 @@
       <option *ngFor="let s of users" [value]="s.uid">{{ s.name }}</option>
     </select>
 
-    <label>Subject</label>
-    <input type="text" [(ngModel)]="selectedSubject" />
-
-    <button (click)="assignClass()">Save</button>
+  <button (click)="assignClass()">Save</button>
     <button (click)="editingSlot = null">Cancel</button>
   </div>
 </div>

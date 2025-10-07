@@ -1,1 +1,58 @@
-/* empty placeholder */
+.class-list {
+	padding: 1rem;
+
+	.week-nav {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		margin-bottom: 0.75rem;
+	}
+
+	.week-range {
+		font-weight: 600;
+	}
+
+	.add-class {
+		margin-bottom: 1rem;
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+	}
+
+		.welcome {
+			font-size: 1.25rem;
+			margin-bottom: 0.25rem;
+			color: #222;
+			font-weight: 600;
+		}
+
+	ul {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+	}
+
+	li {
+		padding: 0.75rem;
+		border: 1px solid #e6e6e6;
+		border-radius: 6px;
+		margin-bottom: 0.5rem;
+		display: flex;
+		justify-content: space-between;
+		gap: 1rem;
+		align-items: center;
+	}
+
+	.cls-datetime {
+		color: #666;
+		font-size: 0.95rem;
+	}
+}
+
+.empty-state {
+	padding: 1rem;
+	border: 1px dashed #d9d9d9;
+	border-radius: 6px;
+	color: #666;
+	text-align: center;
+}

@@ -1,4 +1,106 @@
 <div class="materials-menu">
   <h2>Materials</h2>
-  <p>List of materials will appear here.</p>
+
+  <div class="materials-top">
+    <div class="categories">
+      <h4>Categories</h4>
+      <ul>
+        <li *ngFor="let c of categories" (click)="selectCategory(c)" [class.active]="c === selectedCategory">{{ c }}</li>
+      </ul>
+      <div *ngIf="isTeacher" class="create-category">
+        <input [(ngModel)]="newCategoryName" placeholder="New category name" />
+        <button (click)="createCategory()">Create</button>
+      </div>
+
+      <!-- moved create material form into the left menu under categories -->
+      <div *ngIf="isTeacher" class="create-material-left">
+        <h4>Create Lesson Note</h4>
+        <input [(ngModel)]="newMaterialTitle" placeholder="Title" />
+        <textarea [(ngModel)]="newMaterialContent" placeholder="Type notes here (WordPad style)"></textarea>
+        <label>Or upload file (image/pdf/txt): <input type="file" (change)="onFileChange($event)" /></label>
+        <button (click)="createMaterial()">Save Material</button>
+      </div>
+    </div>
+
+    <div class="materials-list">
+      <div class="browse">
+        <h4>{{ selectedCategory || 'All Materials' }}</h4>
+        <table class="materials-table">
+          <thead>
+            <tr><th>Title</th><th>Category</th><th>Created</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let m of materials">
+              <td>{{ m.title }}</td>
+              <td>{{ m.category }}</td>
+              <td>{{ m.createdAt?.toDate ? (m.createdAt.toDate() | date:'medium') : (m.createdAt | date:'medium') }}</td>
+              <td>
+                <button (click)="openModal(m)">Open</button>
+                <button *ngIf="isTeacher" (click)="openModal(m, true)">Edit</button>
+                <button *ngIf="isTeacher" (click)="deleteMaterial(m)">Delete</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal viewer/editor -->
+<div class="materials-modal" *ngIf="modalOpen">
+  <div class="materials-modal-backdrop" (click)="closeModal()"></div>
+  <div class="materials-modal-content">
+    <div class="materials-modal-header">
+      <div style="flex:1">
+        <h3 *ngIf="!modalEditable">{{ modalMaterial?.title }}</h3>
+        <div *ngIf="modalEditable" style="display:flex;align-items:center;gap:8px">
+          <input [(ngModel)]="modalTitle" placeholder="Title" style="flex:1;" />
+          <label *ngIf="isTeacher">Category:
+            <select [(ngModel)]="modalCategory">
+              <option *ngFor="let c of categories" [value]="c">{{c}}</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button (click)="downloadModal()">Download</button>
+        <button *ngIf="!modalEditable" (click)="openInNewWindow(modalMaterial)">Open in new window</button>
+        <button (click)="closeModal()">Close</button>
+      </div>
+    </div>
+    <div class="materials-modal-body">
+      <div *ngIf="modalUrl && !modalEditable">
+        <!-- preview file (image/pdf) -->
+        <div *ngIf="(modalMaterial?.fileType || '').startsWith('image/')">
+          <img [src]="modalUrl" style="max-width:100%" />
+        </div>
+        <div *ngIf="(modalMaterial?.fileType || '') === 'application/pdf'">
+          <embed [src]="modalUrl" type="application/pdf" width="100%" height="600px" />
+        </div>
+        <div *ngIf="(modalMaterial?.fileType || '').startsWith('text/')">
+          <pre>{{ modalText }}</pre>
+        </div>
+      </div>
+
+      <div *ngIf="modalOpen && modalEditable">
+        <div *ngIf="isTeacher">
+          <label>Category: <select [(ngModel)]="modalCategory">
+            <option *ngFor="let c of categories" [value]="c">{{c}}</option>
+          </select></label>
+        </div>
+        <textarea rows="15" style="width:100%" [(ngModel)]="modalText"></textarea>
+        <div style="margin-top:8px">
+          <button (click)="saveModal()">Save</button>
+          <button (click)="downloadModal()">Download</button>
+          <button (click)="closeModal()">Cancel</button>
+        </div>
+      </div>
+
+      <div *ngIf="modalOpen && !modalUrl && !modalEditable">
+        <!-- content-only note preview -->
+        <pre>{{ modalText }}</pre>
+      </div>
+    </div>
+  </div>
 </div>
