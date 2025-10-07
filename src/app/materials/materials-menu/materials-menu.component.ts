@@ -58,6 +58,34 @@ export class MaterialsMenuComponent implements OnInit {
   modalMaterial: any = null;
   modalUrl: string | null = null;
   modalText = '';
+
+  // Create popup state (left-side signs)
+  createPopupOpen: 'category' | 'material' | null = null;
+
+  openCreatePopup(kind: 'category' | 'material') {
+    this.createPopupOpen = kind;
+  }
+
+  closeCreatePopup() {
+    this.createPopupOpen = null;
+    // reset form fields
+    this.newCategoryName = '';
+    this.newMaterialTitle = '';
+    this.newMaterialContent = '';
+    this.newMaterialFile = null;
+  }
+
+  async createCategoryFromPopup() {
+    if (!this.isTeacher) return;
+    await this.createCategory();
+    this.closeCreatePopup();
+  }
+
+  async createMaterialFromPopup() {
+    if (!this.isTeacher) return;
+    await this.createMaterial();
+    this.closeCreatePopup();
+  }
   modalCategory: string | null = null;
   modalTitle = '';
 

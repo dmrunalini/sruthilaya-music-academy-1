@@ -7,18 +7,30 @@
       <ul>
         <li *ngFor="let c of categories" (click)="selectCategory(c)" [class.active]="c === selectedCategory">{{ c }}</li>
       </ul>
-      <div *ngIf="isTeacher" class="create-category">
-        <input [(ngModel)]="newCategoryName" placeholder="New category name" />
-        <button (click)="createCategory()">Create</button>
+      <div *ngIf="isTeacher" class="create-signs">
+        <button class="icon-sign" title="Create category" (click)="openCreatePopup('category')">➕ Category</button>
+        <button class="icon-sign" title="Create lesson note" (click)="openCreatePopup('material')">📝 Lesson Note</button>
       </div>
 
-      <!-- moved create material form into the left menu under categories -->
-      <div *ngIf="isTeacher" class="create-material-left">
-        <h4>Create Lesson Note</h4>
-        <input [(ngModel)]="newMaterialTitle" placeholder="Title" />
-        <textarea [(ngModel)]="newMaterialContent" placeholder="Type notes here (WordPad style)"></textarea>
-        <label>Or upload file (image/pdf/txt): <input type="file" (change)="onFileChange($event)" /></label>
-        <button (click)="createMaterial()">Save Material</button>
+      <!-- small inline popup used for creating category or material -->
+      <div *ngIf="createPopupOpen" class="create-popup">
+        <div class="popup-header">
+          <strong *ngIf="createPopupOpen === 'category'">Create Category</strong>
+          <strong *ngIf="createPopupOpen === 'material'">Create Lesson Note</strong>
+          <button class="close-x" (click)="closeCreatePopup()">✕</button>
+        </div>
+        <div class="popup-body">
+          <div *ngIf="createPopupOpen === 'category'">
+            <input [(ngModel)]="newCategoryName" placeholder="New category name" />
+            <div class="popup-actions"><button (click)="createCategoryFromPopup()">Create</button> <button (click)="closeCreatePopup()">Cancel</button></div>
+          </div>
+          <div *ngIf="createPopupOpen === 'material'">
+            <input [(ngModel)]="newMaterialTitle" placeholder="Title" />
+            <textarea [(ngModel)]="newMaterialContent" placeholder="Type notes here"></textarea>
+            <label class="file-row">Upload file: <input type="file" (change)="onFileChange($event)" /></label>
+            <div class="popup-actions"><button (click)="createMaterialFromPopup()">Save</button> <button (click)="closeCreatePopup()">Cancel</button></div>
+          </div>
+        </div>
       </div>
     </div>
 

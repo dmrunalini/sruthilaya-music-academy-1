@@ -50,5 +50,16 @@
 	.materials-modal-content { position: relative; background: #fff; padding: 1rem; width: 80%; max-width: 900px; max-height: 90%; overflow: auto; border-radius: 6px; box-shadow: 0 8px 30px rgba(0,0,0,0.2); }
 	.materials-modal-header { display:flex; justify-content:space-between; align-items:center; }
 	.materials-modal-body { margin-top: 0.5rem; }
+
+	/* create signs and popup */
+	.create-signs { display:flex; gap:8px; margin-top:8px; }
+	.icon-sign { background:#ffffff; border:1px solid #ddd; padding:6px 8px; border-radius:4px; cursor:pointer; }
+	.icon-sign:hover { background:#f7f9fc; }
+
+	.create-popup { position: absolute; left:220px; top:80px; background:#fff; border:1px solid #ddd; padding:10px; border-radius:6px; box-shadow:0 6px 18px rgba(0,0,0,0.12); z-index:100; width:320px; }
+	.create-popup .popup-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px }
+	.create-popup .popup-body input, .create-popup .popup-body textarea { width:100%; margin-bottom:6px }
+	.create-popup .popup-actions { display:flex; gap:8px; justify-content:flex-end }
+	.create-popup .close-x { background:none; border: none; cursor:pointer }
 }
 /* empty placeholder */
