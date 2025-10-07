@@ -1,6 +1,6 @@
 <nav class="navbar">
   <a [routerLink]="homeLink">Home</a>
-  <a routerLink="/materials">Materials</a>
+  <a *ngIf="isLoggedIn()" routerLink="/materials">Materials</a>
   <!-- Classes link intentionally hidden from navbar; access classes via direct route or dashboard -->
   <span class="spacer"></span>
   <ng-container *ngIf="!isLoggedIn(); else logged">
@@ -8,6 +8,7 @@
     <a routerLink="/signup">Signup</a>
   </ng-container>
   <ng-template #logged>
+    <a routerLink="/profile">Profile</a>
     <button (click)="logout()">Logout</button>
   </ng-template>
 </nav>

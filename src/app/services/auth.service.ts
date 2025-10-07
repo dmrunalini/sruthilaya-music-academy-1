@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { User } from '../models/user.model';
 import { auth, db } from '../firebase';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User as FirebaseUser } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User as FirebaseUser, sendPasswordResetEmail as fbSendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updatePassword as fbUpdatePassword } from 'firebase/auth';
 import { setDoc, doc } from 'firebase/firestore';
 import { FirestoreService } from './firestore.service';
 import { BehaviorSubject } from 'rxjs';
@@ -33,6 +33,41 @@ export class AuthService {
         this.userSubject.next(null);
       }
     });
+  }
+
+  // Send a password reset email to the given address (Firebase handles the email)
+  async sendPasswordReset(email: string): Promise<void> {
+    try {
+      await fbSendPasswordResetEmail(auth, email);
+    } catch (err: any) {
+      console.error('Auth: sendPasswordReset error', err);
+      throw err;
+    }
+  }
+
+  // Reauthenticate current user with their current password and update to a new password
+  async changePassword(oldPassword: string, newPassword: string): Promise<void> {
+    const current = auth.currentUser;
+    if (!current || !current.email) {
+      throw new Error('No authenticated user');
+    }
+    try {
+      const cred = EmailAuthProvider.credential(current.email, oldPassword);
+      await reauthenticateWithCredential(current, cred);
+      await fbUpdatePassword(current, newPassword);
+    } catch (err: any) {
+      // Map common Firebase errors to friendly messages that can be shown inline
+      const code = err?.code || err?.message || '';
+      let message = 'Failed to change password';
+      if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+        message = 'Current password is incorrect';
+      } else if (code === 'auth/weak-password') {
+        message = 'The new password is too weak';
+      } else if (typeof err?.message === 'string' && err.message) {
+        message = err.message;
+      }
+      throw new Error(message);
+    }
   }
 
   async signup(email: string, password: string, userDetails: User): Promise<void> {

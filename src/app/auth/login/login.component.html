@@ -3,14 +3,18 @@
   <form (ngSubmit)="onSubmit()" [formGroup]="loginForm">
     <label>Email</label>
     <input formControlName="email" />
+  <div class="error" *ngIf="loginForm.get('email')?.touched && loginForm.get('email')?.invalid">Enter a valid email</div>
 
     <label>Password</label>
     <input type="password" formControlName="password" />
+  <div class="error" *ngIf="loginForm.get('password')?.touched && loginForm.get('password')?.invalid">Password is required (min 6 chars)</div>
 
     <button type="submit">Login</button>
   </form>
 
   <div *ngIf="errorMessage" class="error">{{ errorMessage }}</div>
+
+  <p><a routerLink="/password-reset">Forgot password?</a></p>
 
   <p>Don't have an account? <a routerLink="/signup">Sign up</a></p>
 </div>

@@ -7,7 +7,8 @@ import { environment } from './environments/environment';
 import type { Routes } from '@angular/router';
 
 const routes: Routes = [
-  { path: '', redirectTo: '/login', pathMatch: 'full' },
+  { path: '', redirectTo: '/welcome', pathMatch: 'full' },
+  { path: 'welcome', loadComponent: () => import('./app/welcome/welcome.component').then(m => m.WelcomeComponent) },
   { path: 'login', loadComponent: () => import('./app/auth/login/login.component').then(m => m.LoginComponent) },
   { path: 'signup', loadComponent: () => import('./app/auth/signup/signup.component').then(m => m.SignupComponent) },
   { path: 'classes', loadComponent: () => import('./app/classes/class-list/class-list.component').then(m => m.ClassListComponent), canActivate: [AuthGuard] },
@@ -15,6 +16,9 @@ const routes: Routes = [
   { path: 'calendar', loadComponent: () => import('./app/calendar/calendar.component').then(m => m.CalendarComponent), canActivate: [AuthGuard] },
   { path: 'materials', loadComponent: () => import('./app/materials/materials-menu/materials-menu.component').then(m => m.MaterialsMenuComponent), canActivate: [AuthGuard] },
   { path: 'notifications', loadComponent: () => import('./app/notifications/notifications.component').then(m => m.NotificationsComponent) }
+  ,
+  { path: 'password-reset', loadComponent: () => import('./app/auth/password-reset/password-reset.component').then(m => m.PasswordResetComponent) },
+  { path: 'profile', loadComponent: () => import('./app/profile/profile.component').then(m => m.ProfileComponent), canActivate: [AuthGuard] }
 ];
 
 bootstrapApplication(AppComponent, {

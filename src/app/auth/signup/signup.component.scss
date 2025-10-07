@@ -1,1 +1,15 @@
-/* empty placeholder */
+/* Basic signup form styles */
+.signup {
+	max-width: 640px;
+	margin: 16px auto;
+	padding: 16px;
+	background: #fff;
+	border-radius: 6px;
+	box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+.signup label { display:block; margin-top:12px; font-weight:600; }
+.signup input, .signup select { width:100%; padding:8px 10px; margin-top:6px; border:1px solid #ddd; border-radius:4px; }
+.signup .phone-row { display:flex; gap:8px; }
+.signup .phone-row select { width:120px; }
+.signup .error { color:#b00020; margin-top:6px; font-size:0.9em; }
+.signup button { margin-top:12px; padding:8px 16px; }

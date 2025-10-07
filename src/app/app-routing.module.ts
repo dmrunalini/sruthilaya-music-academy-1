@@ -8,6 +8,8 @@ import { CalendarComponent } from './calendar/calendar.component';
 import { MaterialsMenuComponent } from './materials/materials-menu/materials-menu.component';
 import { NotificationsComponent } from './notifications/notifications.component';
 import { AuthGuard } from './core/auth.guard';
+import { PasswordResetComponent } from './auth/password-reset/password-reset.component';
+import { ProfileComponent } from './profile/profile.component';
 
 const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
@@ -18,6 +20,8 @@ const routes: Routes = [
   { path: 'calendar', component: CalendarComponent, canActivate: [AuthGuard] },
   { path: 'materials', component: MaterialsMenuComponent, canActivate: [AuthGuard] },
   { path: 'notifications', component: NotificationsComponent, canActivate: [AuthGuard] },
+  { path: 'password-reset', component: PasswordResetComponent },
+  { path: 'profile', component: ProfileComponent, canActivate: [AuthGuard] },
 ];
 
 @NgModule({

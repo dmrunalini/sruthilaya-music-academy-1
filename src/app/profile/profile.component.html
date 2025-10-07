@@ -1,0 +1,66 @@
+<div class="profile">
+  <h2>Profile</h2>
+
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <label>Name</label>
+    <input formControlName="name" />
+    <div class="error" *ngIf="form.get('name')?.touched && form.get('name')?.invalid">Name is required</div>
+
+    <label>Phone</label>
+    <div class="phone-row">
+      <select formControlName="countryCode">
+        <option value="+91">+91 (IN)</option>
+        <option value="+1">+1 (US)</option>
+        <option value="+44">+44 (UK)</option>
+        <option value="+61">+61 (AU)</option>
+      </select>
+      <input formControlName="phone" />
+    </div>
+    <div class="error" *ngIf="form.get('phone')?.touched && form.get('phone')?.invalid">Enter a valid phone number</div>
+
+    <label>Age</label>
+    <input type="number" formControlName="age" />
+    <div class="error" *ngIf="form.get('age')?.touched && form.get('age')?.invalid">Enter a valid age (5-120)</div>
+
+    <label>Gender</label>
+    <select formControlName="gender">
+      <option value="">(not set)</option>
+      <option value="male">Male</option>
+      <option value="female">Female</option>
+      <option value="other">Other</option>
+    </select>
+
+    <label>Teams link</label>
+    <input formControlName="teamsLink" placeholder="https://teams.example.com/.." />
+    <div class="error" *ngIf="form.get('teamsLink')?.touched && form.get('teamsLink')?.invalid">Enter a valid URL</div>
+
+    <div class="actions">
+      <button type="submit" [disabled]="form.invalid">Save profile</button>
+      <button type="button" (click)="pwModalOpen = true">Change password</button>
+    </div>
+  </form>
+
+  <div *ngIf="message" class="message">{{ message }}</div>
+  <div *ngIf="error" class="error">{{ error }}</div>
+
+  <div class="modal" *ngIf="pwModalOpen">
+    <div class="modal-content">
+      <h3>Change password</h3>
+      <form [formGroup]="pwform" (ngSubmit)="changePassword()">
+        <label>Current password</label>
+        <input type="password" formControlName="oldPassword" />
+
+        <label>New password</label>
+        <input type="password" formControlName="newPassword" />
+
+        <label>Confirm new password</label>
+        <input type="password" formControlName="confirmPassword" />
+
+        <div class="modal-actions">
+          <button type="submit">Update password</button>
+          <button type="button" (click)="pwModalOpen = false">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

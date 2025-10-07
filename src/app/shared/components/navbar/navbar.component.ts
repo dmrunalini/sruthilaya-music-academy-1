@@ -13,7 +13,7 @@ import { Subscription } from 'rxjs';
 })
 export class NavbarComponent {
   private sub: Subscription | null = null;
-  homeLink = '/login';
+  homeLink = '/welcome';
 
   constructor(private authService: AuthService) {
     // initialize from cached profile if available
@@ -23,13 +23,13 @@ export class NavbarComponent {
     // react to changes in auth/profile
     this.sub = this.authService.user$.subscribe(u => {
       if (!u) {
-        this.homeLink = '/login';
+        this.homeLink = '/welcome';
       } else if (u.role === 'teacher') {
         this.homeLink = '/calendar';
       } else if (u.role === 'student') {
         this.homeLink = '/classes';
       } else {
-        this.homeLink = '/login';
+        this.homeLink = '/welcome';
       }
     });
   }
