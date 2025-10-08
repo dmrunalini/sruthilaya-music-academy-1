@@ -5,19 +5,21 @@ import { auth, db } from '../firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User as FirebaseUser, sendPasswordResetEmail as fbSendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updatePassword as fbUpdatePassword } from 'firebase/auth';
 import { setDoc, doc } from 'firebase/firestore';
 import { FirestoreService } from './firestore.service';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
   userData: User | null = null;
-  private userSubject = new BehaviorSubject<User | null>(null);
-  user$ = this.userSubject.asObservable();
+  private userSubject = new BehaviorSubject<User | null | undefined>(undefined);
+  user$: Observable<User | null | undefined> = this.userSubject.asObservable();
+  private authInitialized = false;
 
   constructor(private router: Router, private firestoreService: FirestoreService) {
     // Listen to auth state changes and load Firestore profile (to get role)
     auth.onAuthStateChanged((u: FirebaseUser | null) => {
+      this.authInitialized = true;
       if (u) {
         // load profile from Firestore
         this.firestoreService.getUser(u.uid).subscribe(profile => {
@@ -110,7 +112,20 @@ export class AuthService {
     return this.userData !== null || !!auth.currentUser;
   }
 
+  isInitialized(): boolean {
+    return this.authInitialized;
+  }
+
   getUserData(): User | null {
     return this.userData;
+  }
+
+  /**
+   * Manually merge and broadcast updated user fields (e.g. after profile save)
+   */
+  updateCachedUser(patch: Partial<User>) {
+    if (!this.userData) return;
+    this.userData = { ...this.userData, ...patch } as User;
+    this.userSubject.next(this.userData);
   }
 }

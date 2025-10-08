@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../services/auth.service';
@@ -6,7 +6,8 @@ import { FirestoreService } from '../services/firestore.service';
 import { TimezoneService } from '../services/timezone.service';
 import { User } from '../models/user.model';
 import { Class } from '../models/class.model';
-import { firstValueFrom } from 'rxjs';
+import { combineLatest, Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 
 interface StudentInfo extends User {
   remainingClassesThisMonth: number;
@@ -17,7 +18,8 @@ interface StudentInfo extends User {
 interface RecurringClassForm {
   studentId: string;
   selectedDays: string[];
-  time: string;
+  startTime: string;      // chosen start time
+  durationMinutes: number; // 30,45,60
   startDate: string;
   monthsToGenerate: number;
 }
@@ -29,7 +31,7 @@ interface RecurringClassForm {
   templateUrl: './students.component.html',
   styleUrls: ['./students.component.scss']
 })
-export class StudentsComponent implements OnInit {
+export class StudentsComponent implements OnInit, OnDestroy {
   students: StudentInfo[] = [];
   allClasses: Class[] = [];
   isTeacher = false;
@@ -43,10 +45,18 @@ export class StudentsComponent implements OnInit {
   recurringForm: RecurringClassForm = {
     studentId: '',
     selectedDays: [],
-    time: '',
+    startTime: '',
+    durationMinutes: 30,
     startDate: '',
     monthsToGenerate: 6
   };
+  recurringConflictError = '';
+  startTimeOptions: { time: string; available: boolean }[] = [];
+
+  private dataSub: Subscription | null = null;
+  private authSub: Subscription | null = null;
+  private usersLoaded = false;
+  private classesLoaded = false;
 
   // Timezone properties
   teacherTimezone = 'IST'; // Default to IST, should be loaded from user profile
@@ -69,42 +79,43 @@ export class StudentsComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    const user = this.authService.getUserData();
-    this.isTeacher = !!(user && user.role === 'teacher');
-    
-    if (!this.isTeacher) {
-      // Redirect non-teachers or handle appropriately
-      this.loading = false;
-      return;
-    }
-
-    // Load teacher's timezone preference
-    this.teacherTimezone = user?.timezone || 'IST';
-
-    this.loadData();
+    // Wait reactively for auth to initialize and confirm teacher role
+    this.authSub = this.authService.user$
+      .pipe(filter(u => u !== undefined)) // skip until auth resolved
+      .subscribe(user => {
+        this.isTeacher = !!(user && user.role === 'teacher');
+        if (!this.isTeacher) {
+          this.loading = false;
+          return;
+        }
+        // Teacher auth ready; capture timezone and start data streams if not already
+        this.teacherTimezone = user?.timezone || 'IST';
+        if (!this.dataSub) {
+          this.initializeDataStreams();
+        }
+      });
   }
 
-  private async loadData() {
-    try {
-      // Load users and classes in parallel
-      const [users, classes] = await Promise.all([
-        firstValueFrom(this.firestoreService.getUsers()),
-        firstValueFrom(this.firestoreService.getClasses())
-      ]);
+  private initializeDataStreams() {
+    const users$ = this.firestoreService.getUsers();
+    const classes$ = this.firestoreService.getClasses();
 
-      this.allClasses = classes || [];
-      
-      // Filter to get only students
-      const studentUsers = (users || []).filter(user => user.role === 'student');
-      
-      // Calculate student info
-      this.students = studentUsers.map(student => this.calculateStudentInfo(student));
-      
-      this.loading = false;
-    } catch (error) {
-      console.error('Error loading student data:', error);
-      this.loading = false;
-    }
+    this.dataSub = combineLatest([users$, classes$]).subscribe({
+      next: ([users, classes]) => {
+        this.usersLoaded = true;
+        this.classesLoaded = true;
+        this.allClasses = classes || [];
+        const studentUsers = (users || []).filter(u => u.role === 'student');
+        this.students = studentUsers.map(s => this.calculateStudentInfo(s));
+        // Recompute time options reactively when classes change
+        this.refreshTimeOptions();
+        this.loading = false;
+      },
+      error: err => {
+        console.error('Error in students/classes stream', err);
+        this.loading = false;
+      }
+    });
   }
 
   private calculateStudentInfo(student: User): StudentInfo {
@@ -195,10 +206,13 @@ export class StudentsComponent implements OnInit {
     this.recurringForm = {
       studentId: student.uid || '',
       selectedDays: [],
-      time: '16:00', // Default to 4 PM
-      startDate: new Date().toISOString().split('T')[0], // Today's date
+      startTime: '',
+      durationMinutes: 30,
+      startDate: new Date().toISOString().split('T')[0],
       monthsToGenerate: 6
     };
+    this.startTimeOptions = this.computeStartTimeOptions();
+    this.recurringConflictError = '';
     this.showRecurringModal = true;
   }
 
@@ -207,10 +221,12 @@ export class StudentsComponent implements OnInit {
     this.recurringForm = {
       studentId: '',
       selectedDays: [],
-      time: '',
+      startTime: '',
+      durationMinutes: 30,
       startDate: '',
       monthsToGenerate: 6
     };
+    this.recurringConflictError = '';
   }
 
   onDaySelectionChange(dayValue: string, event: any): void {
@@ -221,6 +237,28 @@ export class StudentsComponent implements OnInit {
     } else {
       this.recurringForm.selectedDays = this.recurringForm.selectedDays.filter(day => day !== dayValue);
     }
+    this.startTimeOptions = this.computeStartTimeOptions();
+    this.detectRecurringConflicts();
+  }
+
+  onDurationChange(): void {
+    this.startTimeOptions = this.computeStartTimeOptions();
+    if (this.recurringForm.startTime && !this.isTimeCurrentlyAvailable(this.recurringForm.startTime)) {
+      this.recurringForm.startTime = '';
+    }
+    this.detectRecurringConflicts();
+  }
+
+  onStartTimeChange(): void {
+    this.detectRecurringConflicts();
+  }
+
+  onStartDateChange(): void {
+    this.startTimeOptions = this.computeStartTimeOptions();
+    if (this.recurringForm.startTime && !this.isTimeCurrentlyAvailable(this.recurringForm.startTime)) {
+      this.recurringForm.startTime = '';
+    }
+    this.detectRecurringConflicts();
   }
 
   isDaySelected(dayValue: string): boolean {
@@ -229,6 +267,10 @@ export class StudentsComponent implements OnInit {
 
   async createRecurringClasses(): Promise<void> {
     if (!this.isFormValid()) {
+      return;
+    }
+    this.detectRecurringConflicts();
+    if (this.recurringConflictError) {
       return;
     }
 
@@ -241,7 +283,7 @@ export class StudentsComponent implements OnInit {
       }
 
       const teacher = this.authService.getUserData();
-      const classes = this.generateRecurringClasses(student, teacher);
+  const classes = this.generateRecurringClasses(student, teacher);
       
       // Create all classes in batch
       for (const classData of classes) {
@@ -251,7 +293,7 @@ export class StudentsComponent implements OnInit {
       console.log(`Created ${classes.length} recurring classes for ${student.name}`);
       
       // Refresh the data to show new classes
-      await this.loadData();
+  // No explicit reload needed; realtime streams will update automatically
       
       this.closeRecurringModal();
     } catch (error) {
@@ -266,7 +308,8 @@ export class StudentsComponent implements OnInit {
     return !!(
       this.recurringForm.studentId &&
       this.recurringForm.selectedDays.length > 0 &&
-      this.recurringForm.time &&
+      this.recurringForm.startTime &&
+      this.recurringForm.durationMinutes > 0 &&
       this.recurringForm.startDate &&
       this.recurringForm.monthsToGenerate > 0
     );
@@ -287,35 +330,30 @@ export class StudentsComponent implements OnInit {
       const dayOfWeek = currentDate.getDay();
       
       if (selectedDayNumbers.includes(dayOfWeek)) {
-        // Create class for this day
         const classDateTime = new Date(currentDate);
-        const [hours, minutes] = this.recurringForm.time.split(':');
-        classDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-
-        // Only create classes for future dates
+        const [h, m] = this.recurringForm.startTime.split(':');
+        classDateTime.setHours(parseInt(h), parseInt(m), 0, 0);
         if (classDateTime > new Date()) {
-          // Create UTC version of the class date for consistent storage
           const utcClassDate = this.timezoneService.createUTCFromLocalTime(
-            this.recurringForm.time,
+            this.recurringForm.startTime,
             classDateTime,
             this.teacherTimezone
           );
-
+          const endTime = this.computeEndTime(this.recurringForm.startTime, this.recurringForm.durationMinutes);
           const classData: Partial<Class> = {
             studentName: student.name || 'Unknown Student',
             name: `Class for ${student.name || 'Unknown Student'}`,
             subject: 'Music Lesson',
-            timeSlot: this.recurringForm.time,
+            timeSlot: `${this.recurringForm.startTime} - ${endTime}`,
             teacherId: teacher?.uid || '',
-            classDate: classDateTime, // Local time for display
-            utcDate: utcClassDate, // UTC time for consistent storage
-            timezone: this.teacherTimezone, // Teacher's timezone
+            classDate: classDateTime,
+            utcDate: utcClassDate,
+            timezone: this.teacherTimezone,
             studentUid: student.uid || '',
             studentEmail: student.email || '',
             isRecurring: true,
             recurringId: `${student.uid || 'unknown'}_recurring_${Date.now()}`
           } as any;
-
           classes.push(classData);
         }
       }
@@ -351,32 +389,113 @@ export class StudentsComponent implements OnInit {
    * Convert scheduled time to student's timezone for preview
    */
   getConvertedTimeForStudent(): string {
-    if (!this.recurringForm.time || !this.recurringForm.startDate) return '';
-    
+    if (!this.recurringForm.startTime || !this.recurringForm.startDate) return '';
     const selectedStudent = this.getSelectedStudent();
     if (!selectedStudent?.timezone || selectedStudent.timezone === this.teacherTimezone) return '';
-
     try {
-      // Create a date with the selected time
-      const tempDate = new Date(`${this.recurringForm.startDate}T${this.recurringForm.time}`);
-      
-      // Convert from teacher's timezone to student's timezone
-      const convertedDate = this.timezoneService.convertTimezone(
-        tempDate,
-        this.teacherTimezone,
-        selectedStudent.timezone
-      );
-      
-      // Format as time only
-      return convertedDate.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-      });
+      const buildDate = (time: string) => new Date(`${this.recurringForm.startDate}T${time}`);
+      const fromLocal = buildDate(this.recurringForm.startTime);
+      const endTime = this.computeEndTime(this.recurringForm.startTime, this.recurringForm.durationMinutes);
+      const toLocal = buildDate(endTime);
+      const fromConverted = this.timezoneService.convertTimezone(fromLocal, this.teacherTimezone, selectedStudent.timezone);
+      const toConverted = this.timezoneService.convertTimezone(toLocal, this.teacherTimezone, selectedStudent.timezone);
+      const fmt = (d: Date) => d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      return `${fmt(fromConverted)} - ${fmt(toConverted)}`;
     } catch (error) {
       console.error('Error converting time for student:', error);
       return '';
     }
+  }
+
+  computeEndTime(start: string, duration: number): string {
+    if (!start) return '';
+    const [h, m] = start.split(':').map(Number);
+    const dur = typeof duration === 'string' ? parseInt(duration, 10) : duration;
+    if (!Number.isFinite(dur)) return '';
+    const total = h * 60 + m + dur;
+    const eh = Math.floor(total / 60) % 24;
+    const em = total % 60;
+    return `${eh.toString().padStart(2,'0')}:${em.toString().padStart(2,'0')}`;
+  }
+
+  private parseTimeSlot(slot: string): { start: number; end: number } | null {
+    if (!slot) return null;
+    if (slot.includes('-')) {
+      const [a,b] = slot.split('-').map(s => s.trim());
+      const toMin = (t: string) => { const [hh,mm]=t.split(':').map(Number); return hh*60+mm; };
+      if (/^\d{1,2}:\d{2}$/.test(a) && /^\d{1,2}:\d{2}$/.test(b)) {
+        return { start: toMin(a), end: toMin(b) };
+      }
+    } else if (/^\d{1,2}:\d{2}$/.test(slot)) {
+      const [hh,mm] = slot.split(':').map(Number); return { start: hh*60+mm, end: hh*60+mm+30 };
+    }
+    return null;
+  }
+
+  private existingClassConflict(date: Date, startMinutes: number, endMinutes: number): boolean {
+    return this.allClasses.some(cls => {
+      const clsDate = new Date(cls.classDate);
+      if (clsDate.toDateString() !== date.toDateString()) return false;
+      const parsed = this.parseTimeSlot(cls.timeSlot);
+      if (!parsed) return false;
+      return startMinutes < parsed.end && parsed.start < endMinutes;
+    });
+  }
+
+  private computeStartTimeOptions(): { time: string; available: boolean }[] {
+    const options: { time: string; available: boolean }[] = [];
+    for (let m=5*60; m<=22*60; m+=30) {
+      const time = `${Math.floor(m/60).toString().padStart(2,'0')}:${(m%60).toString().padStart(2,'0')}`;
+      options.push({ time, available: true });
+    }
+    if (this.recurringForm.selectedDays.length === 0) return options; // all shown as available until days picked
+    const dayNumbers = this.recurringForm.selectedDays.map(d=>parseInt(d,10));
+    const relevantClasses = this.allClasses.filter(cls => dayNumbers.includes(new Date(cls.classDate).getDay()));
+    const classRanges = relevantClasses.map(cls => this.parseTimeSlot(cls.timeSlot)).filter(Boolean) as {start:number; end:number}[];
+    const dur = typeof this.recurringForm.durationMinutes === 'string' ? parseInt(this.recurringForm.durationMinutes as any, 10) : this.recurringForm.durationMinutes;
+    return options.map(o => {
+      const [h,mm] = o.time.split(':').map(Number);
+      const startMin = h*60+mm;
+      const endMin = startMin + dur;
+      const overlap = classRanges.some(r => startMin < r.end && r.start < endMin);
+      return { time: o.time, available: !overlap };
+    });
+  }
+
+  private isTimeCurrentlyAvailable(time: string): boolean {
+    return this.startTimeOptions.find(o => o.time === time)?.available ?? true;
+  }
+
+  private refreshTimeOptions(): void {
+    this.startTimeOptions = this.computeStartTimeOptions();
+    if (this.recurringForm.startTime && !this.isTimeCurrentlyAvailable(this.recurringForm.startTime)) {
+      // keep selection but warn user by setting conflict error if needed
+      // or clear it; choose to clear for safety
+      this.recurringForm.startTime = '';
+    }
+  }
+
+  detectRecurringConflicts(): void {
+    this.recurringConflictError = '';
+    if (!this.isFormValid()) return;
+    const classes = this.generateRecurringClasses(this.getSelectedStudent() as any, this.authService.getUserData());
+    const conflict = classes.some(c => {
+      const parsed = this.parseTimeSlot(c.timeSlot as any);
+      if (!parsed) return false;
+      const date = new Date(c.classDate as any);
+      return this.existingClassConflict(date, parsed.start, parsed.end);
+    });
+    if (conflict) {
+      this.recurringConflictError = 'One or more generated classes conflict with existing classes. Adjust time / days.';
+    }
+  }
+
+  getTeacherTimezoneDisplayName(): string {
+    return this.teacherTimezone;
+  }
+
+  getSelectedStudentTimezoneDisplayName(): string {
+    return this.getSelectedStudent()?.timezone || '';
   }
 
   get minDate(): string {
@@ -397,7 +516,8 @@ export class StudentsComponent implements OnInit {
 
     try {
       // Get all classes for this student
-      const allClasses = await firstValueFrom(this.firestoreService.getClasses());
+  // We already have real-time classes in allClasses; just operate on them
+  const allClasses = this.allClasses;
       const now = new Date();
 
       // Filter to get future classes for this student
@@ -424,7 +544,7 @@ export class StudentsComponent implements OnInit {
       console.log(`Deleted ${futureClasses.length} future classes for ${student.name}`);
       
       // Refresh the data
-      await this.loadData();
+  // Streams will auto-update; no manual reload
       
       alert(`Successfully deleted ${futureClasses.length} future classes for ${student.name}.`);
     } catch (error) {
@@ -433,5 +553,10 @@ export class StudentsComponent implements OnInit {
     } finally {
       this.resettingClasses = false;
     }
+  }
+
+  ngOnDestroy(): void {
+    this.dataSub?.unsubscribe();
+    this.authSub?.unsubscribe();
   }
 }

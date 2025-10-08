@@ -2,10 +2,14 @@
   {
     "id": "class_1",
     "teacherId": "teacher_anna",
-    "studentId": "student_ravi",
+    "studentUid": "student_ravi",
     "studentName": "Ravi Kumar",
+    "classDate": "2025-10-06T15:00:00Z",
+    "utcDate": "2025-10-06T15:00:00Z",
     "start": "2025-10-06T15:00:00Z",
     "end": "2025-10-06T15:30:00Z",
+    "timeSlot": "15:00 - 15:30",
+    "timezone": "UTC",
     "status": "scheduled",
     "createdAt": "2025-10-01T11:00:00Z"
   }

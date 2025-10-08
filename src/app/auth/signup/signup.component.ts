@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
+import { TimezoneService } from '../../services/timezone.service';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 
@@ -15,8 +16,9 @@ export class SignupComponent {
   signupForm: FormGroup;
   errorMessage = '';
   isSubmitting = false;
+  availableTimezones = this.timezoneService.getAvailableTimezones();
 
-  constructor(private fb: FormBuilder, private authService: AuthService, private router: Router) {
+  constructor(private fb: FormBuilder, private authService: AuthService, private router: Router, private timezoneService: TimezoneService) {
     const phonePattern = /^[0-9()\-\s]{4,20}$/; // phone digits only (country code separate)
     const urlPattern = /^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/\S*)?$/i;
 
@@ -29,6 +31,7 @@ export class SignupComponent {
       age: ['', [Validators.required, Validators.min(5), Validators.max(120)]],
       gender: ['', Validators.required],
       role: ['student', Validators.required],
+      timezone: ['IST', Validators.required],
       teamsLink: ['', Validators.pattern(urlPattern)]
     });
   }
@@ -39,9 +42,9 @@ export class SignupComponent {
     if (this.signupForm.valid) {
       this.isSubmitting = true;
       try {
-    const { name, email, password, countryCode, phone, age, gender, teamsLink, role } = this.signupForm.value;
-  console.log('Calling AuthService.signup with', { email, password, details: { name, email, countryCode, phone, age, gender, teamsLink, role } });
-  await this.authService.signup(email, password, { name, email, countryCode, phone, age, gender, teamsLink, role } as any);
+    const { name, email, password, countryCode, phone, age, gender, teamsLink, role, timezone } = this.signupForm.value;
+  console.log('Calling AuthService.signup with', { email, password, details: { name, email, countryCode, phone, age, gender, teamsLink, role, timezone } });
+  await this.authService.signup(email, password, { name, email, countryCode, phone, age, gender, teamsLink, role, timezone } as any);
   console.log('Signup successful for', email);
   // Redirect based on role
   this.router.navigate([role === 'teacher' ? '/calendar' : '/classes']);

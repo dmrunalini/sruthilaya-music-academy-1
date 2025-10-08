@@ -2,15 +2,6 @@
   <div class="header">
     <h2>Students Dashboard</h2>
     <p class="subtitle">{{ currentMonth }} Overview</p>
-    
-    <div class="timezone-selector">
-      <label for="timezone">Your Timezone:</label>
-      <select id="timezone" [(ngModel)]="teacherTimezone" class="timezone-select">
-        <option *ngFor="let tz of availableTimezones" [value]="tz.code">
-          {{ tz.name }} ({{ tz.code }})
-        </option>
-      </select>
-    </div>
   </div>
 
   <div *ngIf="loading" class="loading">
@@ -53,33 +44,17 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let student of students" class="student-row">
-            <td class="student-name">
-              <div class="name-info">
-                <strong>{{ student.name }}</strong>
-                <small *ngIf="student.age">({{ student.age }} years)</small>
-              </div>
-            </td>
-            <td class="classes-count">
-              <span class="badge" [class.highlight]="student.remainingClassesThisMonth > 0">
-                {{ student.remainingClassesThisMonth }}
-              </span>
-            </td>
+          <tr *ngFor="let student of students" class="student-row" [class.no-classes]="student.remainingClassesThisMonth === 0">
+            <td class="student-name">{{ student.name || 'Unnamed' }}</td>
+            <td>{{ student.remainingClassesThisMonth }}</td>
             <td>
-              <span class="payment-status" [class]="getPaymentStatusClass(student.feePaymentStatus)">
+              <span [ngClass]="getPaymentStatusClass(student.feePaymentStatus)">
                 {{ getPaymentStatusText(student.feePaymentStatus) }}
               </span>
             </td>
-            <td>
-              <span *ngIf="student.lastPaymentDate" class="payment-date">
-                {{ student.lastPaymentDate | date: 'MMM d, yyyy' }}
-              </span>
-              <span *ngIf="!student.lastPaymentDate" class="no-data">-</span>
-            </td>
-            <td class="actions-cell">
-              <button class="action-btn schedule-btn" (click)="openRecurringClassModal(student)" title="Schedule Recurring Classes">
-                📅 Schedule Classes
-              </button>
+            <td>{{ student.lastPaymentDate | date: 'MMM d, y' }}</td>
+            <td class="actions">
+              <button class="btn btn-small" (click)="openRecurringClassModal(student)">Schedule</button>
             </td>
           </tr>
         </tbody>
@@ -121,52 +96,68 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label for="time">Time ({{ teacherTimezone }}) *</label>
-            <input 
-              id="time"
-              type="time" 
-              [(ngModel)]="recurringForm.time"
-              required>
-          </div>
-
-          <div class="form-group">
             <label for="startDate">Start Date *</label>
-            <input 
+            <input
               id="startDate"
-              type="date" 
+              type="date"
               [(ngModel)]="recurringForm.startDate"
+              (change)="onStartDateChange()"
               [min]="minDate"
               required>
           </div>
+          <div class="form-group">
+            <label for="duration">Duration *</label>
+            <select id="duration" [(ngModel)]="recurringForm.durationMinutes" (change)="onDurationChange()">
+              <option [ngValue]="30">30 minutes</option>
+              <option [ngValue]="45">45 minutes</option>
+              <option [ngValue]="60">60 minutes</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="startTime">Start Time ({{ getTeacherTimezoneDisplayName() }}) *</label>
+            <select id="startTime" [(ngModel)]="recurringForm.startTime" (change)="onStartTimeChange()" required>
+              <option value="" disabled>Select time</option>
+              <option *ngFor="let opt of startTimeOptions" [value]="opt.time" [disabled]="!opt.available" [ngClass]="{'time-unavailable': !opt.available}">
+                {{ opt.time }} <span *ngIf="!opt.available">(blocked)</span>
+              </option>
+            </select>
+            <small class="hint" *ngIf="recurringForm.selectedDays.length === 0">Select days to see blocked times.</small>
+          </div>
         </div>
 
-        <div class="timezone-info-box" *ngIf="recurringForm.time">
+        <div class="timezone-info-box" *ngIf="recurringForm.startTime">
           <div class="timezone-row">
-            <span class="timezone-label">Your time ({{ teacherTimezone }}):</span>
-            <span class="timezone-time">{{ recurringForm.time }}</span>
+            <span class="timezone-label">Your time ({{ getTeacherTimezoneDisplayName() }}):</span>
+            <span class="timezone-time">{{ recurringForm.startTime }} - {{ computeEndTime(recurringForm.startTime, recurringForm.durationMinutes) }}</span>
           </div>
           <div class="timezone-row" *ngIf="getSelectedStudent()?.timezone && getSelectedStudent()?.timezone !== teacherTimezone">
-            <span class="timezone-label">Student's time ({{ getSelectedStudent()?.timezone }}):</span>
+            <span class="timezone-label">Student's time ({{ getSelectedStudentTimezoneDisplayName() }}):</span>
             <span class="timezone-time">{{ getConvertedTimeForStudent() }}</span>
           </div>
         </div>
 
         <div class="form-group">
           <label for="monthsToGenerate">Generate for (months) *</label>
-          <select id="monthsToGenerate" [(ngModel)]="recurringForm.monthsToGenerate">
-            <option value="3">3 months</option>
-            <option value="6">6 months</option>
-            <option value="9">9 months</option>
-            <option value="12">12 months</option>
+          <select id="monthsToGenerate" [(ngModel)]="recurringForm.monthsToGenerate" (change)="detectRecurringConflicts()">
+            <option [ngValue]="3">3 months</option>
+            <option [ngValue]="6">6 months</option>
+            <option [ngValue]="9">9 months</option>
+            <option [ngValue]="12">12 months</option>
           </select>
         </div>
 
-        <div class="preview-section" *ngIf="recurringForm.selectedDays.length > 0">
+        <div class="preview-section" *ngIf="recurringForm.selectedDays.length > 0 && recurringForm.startTime">
           <h5>Preview:</h5>
-          <p><strong>Classes:</strong> {{ getSelectedDaysText() }} at {{ recurringForm.time }}</p>
-          <p><strong>Duration:</strong> {{ recurringForm.monthsToGenerate }} months starting {{ recurringForm.startDate | date: 'MMM d, yyyy' }}</p>
+          <p><strong>Classes:</strong> {{ getSelectedDaysText() }} at {{ recurringForm.startTime }} ({{ recurringForm.durationMinutes }} mins)</p>
+          <p><strong>Time Slot:</strong> {{ recurringForm.startTime }} - {{ computeEndTime(recurringForm.startTime, recurringForm.durationMinutes) }}</p>
+          <p><strong>Schedule Length:</strong> {{ recurringForm.monthsToGenerate }} months starting {{ recurringForm.startDate | date: 'MMM d, yyyy' }}</p>
         </div>
       </div>
+    </div>
+
+    <!-- Conflict Error Message -->
+    <div *ngIf="recurringConflictError" class="validation-error">
+      ⚠️ {{ recurringConflictError }}
     </div>
 
     <div class="modal-footer">
@@ -187,7 +178,7 @@
         <button 
           class="btn btn-primary" 
           (click)="createRecurringClasses()"
-          [disabled]="!isFormValid() || creatingClasses || resettingClasses">
+          [disabled]="!isFormValid() || creatingClasses || resettingClasses || recurringConflictError">
           <span *ngIf="creatingClasses">Creating...</span>
           <span *ngIf="!creatingClasses">Create Classes</span>
         </button>

@@ -1,3 +1,13 @@
+select option.time-unavailable {
+  color: #888;
+}
+
+.form-group .hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #666;
+}
 .students-page {
   padding: 1rem;
   max-width: 1200px;
@@ -229,8 +239,8 @@
   .modal-content {
     background: white;
     border-radius: 8px;
-    width: 90%;
-    max-width: 600px;
+    width: 95%;
+    max-width: 800px;
     max-height: 90vh;
     overflow-y: auto;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
@@ -267,7 +277,7 @@
     }
 
     .modal-body {
-      padding: 1.5rem;
+      padding: 2rem;
 
       .form-section {
         h4 {
@@ -310,8 +320,13 @@
 
         .form-row {
           display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 1rem;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 1.5rem;
+          margin-bottom: 1rem;
+
+          @media (max-width: 768px) {
+            grid-template-columns: 1fr 1fr;
+          }
 
           @media (max-width: 480px) {
             grid-template-columns: 1fr;
@@ -403,8 +418,8 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 1rem;
-      padding: 1.5rem;
+      gap: 1.5rem;
+      padding: 2rem;
       border-top: 1px solid #dee2e6;
 
       .button-group {
@@ -476,4 +491,18 @@
       }
     }
   }
+}
+
+/* Validation Error Styles */
+.validation-error {
+  color: #dc3545;
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin: 10px 0;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }

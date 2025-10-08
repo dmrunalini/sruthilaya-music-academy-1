@@ -1,6 +1,6 @@
 {
   "name": "sruthilaya-music-academy-1",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -8,7 +8,9 @@
     "test": "ng test",
     "lint": "ng lint",
     "e2e": "ng e2e",
-    "seed": "node scripts/seedFirestore.js"
+    "seed": "node scripts/seedFirestore.js",
+    "restore:classes": "node scripts/restoreClasses.js",
+    "backfill:utc": "node scripts/backfillUtcDates.js"
   },
   "private": true,
   "dependencies": {
@@ -24,6 +26,7 @@
     "@angular/platform-browser-dynamic": "~19.2.15",
     "@angular/router": "~19.2.15",
     "firebase": "^12.3.0",
+    "firebase-admin": "^12.7.0",
     "typescript": "~5.8.3"
   },
   "repository": {

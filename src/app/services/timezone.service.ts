@@ -16,6 +16,22 @@ export class TimezoneService {
   constructor() { }
 
   /**
+   * Format a date/time in the user's timezone (simple and clean display)
+   */
+  formatInUserTimezone(date: Date, userTimezone: string): string {
+    const tz = this.timezones[userTimezone] || userTimezone;
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    }).format(date);
+  }
+
+  /**
    * Convert a date/time from one timezone to another
    */
   convertTimezone(date: Date, fromTimezone: string, toTimezone: string): Date {

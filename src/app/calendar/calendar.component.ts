@@ -23,13 +23,15 @@ interface Slot {
 export class CalendarComponent implements OnInit {
   // simple week view starting today
   days: Date[] = [];
-  allHours = Array.from({ length: 48 }, (_, i) => i * 0.5); // 0, 0.5, 1, 1.5, ... 23.5 (30-minute intervals)
-  activeHours = Array.from({ length: 32 }, (_, i) => 4.5 + (i * 0.5)); // 4:30 AM to 8:00 PM in 30-min intervals
+  // 15-minute resolution to support quarter-hour scheduling
+  allHours = Array.from({ length: 96 }, (_, i) => i * 0.25); // 0,0.25,0.5,...,23.75
+  activeHours = Array.from({ length: ((20 - 4.5) / 0.25) + 1 }, (_, i) => 4.5 + (i * 0.25)); // 4:30 AM to 8:00 PM in 15-min intervals
   hours = this.activeHours; // default to active hours
   slots: Slot[][] = [];
   classes: any[] = [];
   users: any[] = [];
   isTeacher = false;
+  skippedClassCount = 0;
   editingSlot: Slot | null = null;
   reschedulingClass: any = null;
   selectedStudentUid = '';
@@ -40,12 +42,21 @@ export class CalendarComponent implements OnInit {
   userTimezone = 'IST'; // Default to IST, should be loaded from user profile
   availableTimezones = this.timezoneService.getAvailableTimezones();
   
+  // Scheduling form (start time + duration)
+  scheduleForm = {
+    startTime: '',
+    durationMinutes: 30
+  };
+  scheduleTimeOptions: { time: string; available: boolean }[] = [];
+
   // Rescheduling form
   rescheduleForm = {
     newDate: '',
-    newTime: '',
+    newStartTime: '',
+    durationMinutes: 30,
     studentId: ''
   };
+  rescheduleTimeOptions: { time: string; available: boolean }[] = [];
 
   constructor(
     private calendarService: CalendarService, 
@@ -169,21 +180,57 @@ export class CalendarComponent implements OnInit {
   }
 
   mapClassesToSlots() {
-    console.log('CalendarComponent: mapping classes to slots', this.classes.length);
-    // clear class associations
+    console.log('CalendarComponent: mapping classes to slots (timezone =', this.userTimezone, ') total classes =', this.classes.length);
+    // clear class associations first
     this.slots.forEach(row => row.forEach(s => { s.classId = undefined; s.classInfo = undefined; }));
+
+    const tz = this.userTimezone;
+  this.skippedClassCount = 0;
+
     for (const cls of this.classes) {
-      const d = new Date(cls.classDate);
-      const dayIndex = this.days.findIndex(dd => dd.toDateString() === d.toDateString());
-      const classHour = d.getHours() + (d.getMinutes() / 60); // Convert to fractional hour
-      const hourIndex = this.hours.findIndex(h => Math.abs(h - classHour) < 0.25); // Allow 15-minute tolerance
+      // Normalize raw date (prefer utcDate) which may be:
+      // - JS Date
+      // - Firestore Timestamp (has toDate())
+      // - ISO string
+      // - Possibly undefined / invalid
+      const rawSource = cls.utcDate || cls.classDate;
+      let rawUtc: Date;
+      if (!rawSource) {
+        continue; // nothing to map
+      } else if (rawSource instanceof Date) {
+        rawUtc = rawSource;
+      } else if (typeof rawSource === 'object' && typeof (rawSource as any).toDate === 'function') {
+        try { rawUtc = (rawSource as any).toDate(); } catch { continue; }
+      } else if (typeof rawSource === 'string' || typeof rawSource === 'number') {
+        rawUtc = new Date(rawSource);
+      } else {
+        // unknown shape
+        continue;
+      }
+
+      if (isNaN(rawUtc.getTime())) {
+        this.skippedClassCount++;
+        continue; // skip invalid
+      }
+
+      const displayDate = this.getDisplayDateForTimezone(rawUtc, tz);
+      if (!(displayDate instanceof Date) || isNaN(displayDate.getTime())) {
+        this.skippedClassCount++;
+        continue;
+      }
+
+      const dayIndex = this.days.findIndex(dd => dd.toDateString() === displayDate.toDateString());
+      const classHour = displayDate.getHours() + (displayDate.getMinutes() / 60);
+  // Threshold is half the step (0.25/2 = 0.125) for 15-min resolution
+  const hourIndex = this.hours.findIndex(h => Math.abs(h - classHour) < 0.125);
       if (dayIndex >= 0 && hourIndex >= 0) {
         const slot = this.slots[hourIndex][dayIndex];
         slot.classId = cls.id;
-        slot.classInfo = cls;
+        // Attach derived display date so templates / modals can show correct local time
+        slot.classInfo = { ...cls, _displayDate: displayDate };
       }
     }
-    console.log('CalendarComponent: completed mapping classes to slots');
+    console.log('CalendarComponent: completed mapping classes to slots (timezone applied)');
   }
 
   onSlotClick(slot: Slot) {
@@ -197,6 +244,14 @@ export class CalendarComponent implements OnInit {
       // Clicking on empty slot - show assign option
       this.editingSlot = slot;
       this.selectedStudentUid = '';
+      const h = slot.date.getHours().toString().padStart(2,'0');
+      const m = slot.date.getMinutes().toString().padStart(2,'0');
+      this.scheduleForm = { startTime: `${h}:${m}`, durationMinutes: 30 };
+      this.scheduleTimeOptions = this.computeScheduleTimeOptions();
+      if (!this.isScheduleStartTimeAvailable(this.scheduleForm.startTime)) {
+        const first = this.scheduleTimeOptions.find(o => o.available);
+        this.scheduleForm.startTime = first ? first.time : '';
+      }
     }
   }
 
@@ -210,34 +265,61 @@ export class CalendarComponent implements OnInit {
   openRescheduleModal(classInfo: any) {
     this.reschedulingClass = classInfo;
     const classDate = new Date(classInfo.classDate);
+    const isoDate = classDate.toISOString().split('T')[0];
+    // derive start/end from timeSlot
+    let startTime = classInfo.timeSlot?.split(' - ')[0] || classDate.toTimeString().slice(0,5);
+    let endTime = classInfo.timeSlot?.split(' - ')[1] || startTime;
+    const duration = this.diffMinutes(startTime, endTime) || 30;
     this.rescheduleForm = {
-      newDate: classDate.toISOString().split('T')[0],
-      newTime: classDate.toTimeString().split(':').slice(0, 2).join(':'),
+      newDate: isoDate,
+      newStartTime: startTime,
+      durationMinutes: duration === 45 || duration === 60 ? duration : 30,
       studentId: classInfo.studentUid || ''
     };
+    this.rescheduleTimeOptions = this.computeRescheduleTimeOptions();
   }
 
   closeRescheduleModal() {
     this.reschedulingClass = null;
     this.rescheduleForm = {
       newDate: '',
-      newTime: '',
+      newStartTime: '',
+      durationMinutes: 30,
       studentId: ''
     };
+    this.rescheduleTimeOptions = [];
+  }
+
+  async cancelClass() {
+    if (!this.reschedulingClass) return;
+    
+    const confirmCancel = confirm(`Are you sure you want to cancel this class?\n\nClass: ${this.reschedulingClass.studentName}\nTime: ${this.formatClassTime(this.reschedulingClass)}\n\nThis action cannot be undone.`);
+    
+    if (confirmCancel) {
+      try {
+        await this.calendarService.deleteClass(this.reschedulingClass.id);
+        console.log('Class cancelled successfully');
+        this.closeRescheduleModal();
+        this.loadData(); // Refresh the calendar
+      } catch (error) {
+        console.error('Error cancelling class:', error);
+        alert('Failed to cancel class. Please try again.');
+      }
+    }
   }
 
   async rescheduleClass() {
-    if (!this.reschedulingClass || !this.rescheduleForm.newDate || !this.rescheduleForm.newTime) {
+    if (!this.reschedulingClass || !this.rescheduleForm.newDate || !this.rescheduleForm.newStartTime) {
       return;
     }
 
     try {
-      // Create new date from form inputs in teacher's timezone
-      const newDateTime = new Date(`${this.rescheduleForm.newDate}T${this.rescheduleForm.newTime}`);
+      const endTime = this.computeEndTime(this.rescheduleForm.newStartTime, this.rescheduleForm.durationMinutes);
+      const newDateTime = new Date(`${this.rescheduleForm.newDate}T${this.rescheduleForm.newStartTime}`);
       
       // Create UTC version for consistent storage
       const utcClassDate = this.timezoneService.createUTCFromLocalTime(
-        this.rescheduleForm.newTime,
+        this.rescheduleForm.newStartTime,
         newDateTime,
         this.userTimezone
       );
@@ -250,7 +332,7 @@ export class CalendarComponent implements OnInit {
         ...this.reschedulingClass,
         classDate: newDateTime, // Local time in teacher's timezone
         utcDate: utcClassDate, // UTC time for consistent storage
-        timeSlot: this.rescheduleForm.newTime,
+        timeSlot: `${this.rescheduleForm.newStartTime} - ${endTime}`,
         timezone: this.userTimezone, // Teacher's timezone
         studentTimezone: studentTimezone // Preserve student's timezone
       };
@@ -278,7 +360,7 @@ export class CalendarComponent implements OnInit {
   }
 
   async assignClass() {
-    if (!this.editingSlot) return;
+    if (!this.editingSlot || !this.scheduleForm.startTime) return;
     const teacher = this.auth.getUserData();
     // Prefer the real Firebase auth UID to ensure it matches the security rules
     const currentUid = auth.currentUser?.uid || teacher?.uid || '';
@@ -287,15 +369,19 @@ export class CalendarComponent implements OnInit {
     const selectedStudent = this.users.find(u => u.uid === this.selectedStudentUid);
     const studentTimezone = selectedStudent?.timezone || 'IST';
     
-    // Format the time slot properly
-    const wholeHour = Math.floor(this.editingSlot.date.getHours());
-    const minutes = this.editingSlot.date.getMinutes();
-    const timeSlot = `${wholeHour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    // Create class date with the selected from time
+    const classDate = new Date(this.editingSlot.date);
+  const [fromHours, fromMinutes] = this.scheduleForm.startTime.split(':');
+    classDate.setHours(parseInt(fromHours), parseInt(fromMinutes), 0, 0);
+    
+    // Format the time slot as range
+  const endTime = this.computeEndTime(this.scheduleForm.startTime, this.scheduleForm.durationMinutes);
+  const timeSlot = `${this.scheduleForm.startTime} - ${endTime}`;
     
     // Create UTC version of the class date for consistent storage
     const utcClassDate = this.timezoneService.createUTCFromLocalTime(
-      timeSlot,
-      this.editingSlot.date,
+      this.scheduleForm.startTime,
+      classDate,
       this.userTimezone
     );
     
@@ -305,7 +391,7 @@ export class CalendarComponent implements OnInit {
       studentEmail: selectedStudent?.email || '',
       timeSlot: timeSlot,
       teacherId: currentUid,
-      classDate: this.editingSlot.date, // Local time in teacher's timezone
+      classDate: classDate, // Local time in teacher's timezone with correct from time
       utcDate: utcClassDate, // UTC time for consistent storage
       timezone: this.userTimezone, // Teacher's timezone
       studentTimezone: studentTimezone // Student's timezone for display
@@ -363,7 +449,7 @@ export class CalendarComponent implements OnInit {
    */
   formatHour(hour: number): string {
     const wholeHour = Math.floor(hour);
-    const minutes = (hour % 1) * 60;
+    const minutes = Math.round((hour - wholeHour) * 60);
     const period = hour >= 12 ? 'PM' : 'AM';
     
     let displayHour = wholeHour;
@@ -373,7 +459,7 @@ export class CalendarComponent implements OnInit {
       displayHour = 12;
     }
     
-    const minuteStr = minutes === 0 ? '00' : minutes.toString().padStart(2, '0');
+    const minuteStr = minutes.toString().padStart(2, '0');
     return `${displayHour}:${minuteStr} ${period}`;
   }
 
@@ -416,40 +502,123 @@ export class CalendarComponent implements OnInit {
    * Get preview time in teacher's timezone
    */
   getPreviewTime(): string {
-    if (!this.rescheduleForm.newDate || !this.rescheduleForm.newTime) return '';
+  if (!this.rescheduleForm.newDate || !this.rescheduleForm.newStartTime) return '';
+  const endTime = this.computeEndTime(this.rescheduleForm.newStartTime, this.rescheduleForm.durationMinutes);
+  const fromDate = new Date(`${this.rescheduleForm.newDate}T${this.rescheduleForm.newStartTime}`);
+  const toDate = new Date(`${this.rescheduleForm.newDate}T${endTime}`);
     
-    const previewDate = new Date(`${this.rescheduleForm.newDate}T${this.rescheduleForm.newTime}`);
-    return this.timezoneService.formatInTimezone(previewDate, this.userTimezone, {
+    const fromTime = this.timezoneService.formatInTimezone(fromDate, this.userTimezone, {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    const toTime = this.timezoneService.formatInTimezone(toDate, this.userTimezone, {
+      hour: '2-digit',
       minute: '2-digit',
       timeZoneName: 'short'
     });
+    
+    return `${fromTime} - ${toTime}`;
+  }
+
+  /**
+   * Get simple preview time without timezone info
+   */
+  getSimplePreviewTime(): string {
+    if (!this.rescheduleForm.newDate || !this.rescheduleForm.newStartTime) return '';
+    const date = new Date(`${this.rescheduleForm.newDate}T${this.rescheduleForm.newStartTime}`);
+    const dateStr = date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+    const endTime = this.computeEndTime(this.rescheduleForm.newStartTime, this.rescheduleForm.durationMinutes);
+    return `${dateStr} from ${this.rescheduleForm.newStartTime} to ${endTime}`;
+  }
+
+  /**
+   * Get simple student preview time without timezone info
+   */
+  getSimpleStudentPreviewTime(): string {
+  if (!this.rescheduleForm.newDate || !this.rescheduleForm.newStartTime || !this.reschedulingClass?.studentTimezone) return '';
+  const endTime = this.computeEndTime(this.rescheduleForm.newStartTime, this.rescheduleForm.durationMinutes);
+  const fromDate = new Date(`${this.rescheduleForm.newDate}T${this.rescheduleForm.newStartTime}`);
+  const toDate = new Date(`${this.rescheduleForm.newDate}T${endTime}`);
+    
+    const convertedFromDate = this.timezoneService.convertTimezone(
+      fromDate,
+      this.userTimezone,
+      this.reschedulingClass.studentTimezone
+    );
+    
+    const convertedToDate = this.timezoneService.convertTimezone(
+      toDate,
+      this.userTimezone,
+      this.reschedulingClass.studentTimezone
+    );
+    
+    const dateStr = convertedFromDate.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+    
+    const fromTime = convertedFromDate.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+    
+    const toTime = convertedToDate.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+    
+    return `${dateStr} from ${fromTime} to ${toTime}`;
   }
 
   /**
    * Get preview time in student's timezone
    */
   getPreviewTimeForStudent(): string {
-    if (!this.rescheduleForm.newDate || !this.rescheduleForm.newTime || !this.reschedulingClass?.studentTimezone) return '';
+  if (!this.rescheduleForm.newDate || !this.rescheduleForm.newStartTime || !this.reschedulingClass?.studentTimezone) return '';
+  const endTime = this.computeEndTime(this.rescheduleForm.newStartTime, this.rescheduleForm.durationMinutes);
+  const fromDate = new Date(`${this.rescheduleForm.newDate}T${this.rescheduleForm.newStartTime}`);
+  const toDate = new Date(`${this.rescheduleForm.newDate}T${endTime}`);
     
-    const previewDate = new Date(`${this.rescheduleForm.newDate}T${this.rescheduleForm.newTime}`);
-    const convertedDate = this.timezoneService.convertTimezone(
-      previewDate,
+    const convertedFromDate = this.timezoneService.convertTimezone(
+      fromDate,
       this.userTimezone,
       this.reschedulingClass.studentTimezone
     );
     
-    return this.timezoneService.formatInTimezone(convertedDate, this.reschedulingClass.studentTimezone, {
+    const convertedToDate = this.timezoneService.convertTimezone(
+      toDate,
+      this.userTimezone,
+      this.reschedulingClass.studentTimezone
+    );
+    
+    const fromTime = this.timezoneService.formatInTimezone(convertedFromDate, this.reschedulingClass.studentTimezone, {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    const toTime = this.timezoneService.formatInTimezone(convertedToDate, this.reschedulingClass.studentTimezone, {
+      hour: '2-digit',
       minute: '2-digit',
       timeZoneName: 'short'
     });
+    
+    return `${fromTime} - ${toTime}`;
   }
 
   /**
@@ -461,29 +630,154 @@ export class CalendarComponent implements OnInit {
     return student?.timezone || 'IST';
   }
 
+  // Get the display name for a timezone code
+  getTimezoneDisplayName(timezoneCode: string): string {
+    const timezone = this.availableTimezones.find(tz => tz.code === timezoneCode);
+    return timezone ? timezone.name : timezoneCode;
+  }
+
+  // Get the current user's timezone display name
+  getUserTimezoneDisplayName(): string {
+    return this.getTimezoneDisplayName(this.userTimezone);
+  }
+
+  // Get the selected student's timezone display name
+  getSelectedStudentTimezoneDisplayName(): string {
+    const timezoneCode = this.getSelectedStudentTimezone();
+    return timezoneCode ? this.getTimezoneDisplayName(timezoneCode) : '';
+  }
+
   /**
    * Get student time preview for scheduling
    */
   getStudentTimePreview(): string {
-    if (!this.editingSlot || !this.selectedStudentUid) return '';
-    
+    if (!this.editingSlot || !this.selectedStudentUid || !this.scheduleForm.startTime) return '';
     const studentTimezone = this.getSelectedStudentTimezone();
     if (studentTimezone === this.userTimezone) return '';
+    const fromDate = new Date(this.editingSlot.date);
+    const [fh,fm] = this.scheduleForm.startTime.split(':');
+    fromDate.setHours(parseInt(fh), parseInt(fm), 0, 0);
+    const endTime = this.computeEndTime(this.scheduleForm.startTime, this.scheduleForm.durationMinutes);
+    const toDate = new Date(this.editingSlot.date);
+    const [th,tm] = endTime.split(':');
+    toDate.setHours(parseInt(th), parseInt(tm), 0, 0);
+    const convertedFromDate = this.timezoneService.convertTimezone(fromDate, this.userTimezone, studentTimezone);
+    const convertedToDate = this.timezoneService.convertTimezone(toDate, this.userTimezone, studentTimezone);
+    const fromTime = this.timezoneService.formatInTimezone(convertedFromDate, studentTimezone, { weekday:'short', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    const toTime = this.timezoneService.formatInTimezone(convertedToDate, studentTimezone, { hour:'2-digit', minute:'2-digit', timeZoneName:'short' });
+    return `${fromTime} - ${toTime}`;
+  }
+
+  /**
+   * Validate that the time range is at least 30 minutes
+   */
+  isValidTimeRange(fromTime: string, toTime: string): boolean {
+    if (!fromTime || !toTime) return false;
     
-    const convertedDate = this.timezoneService.convertTimezone(
-      this.editingSlot.date,
-      this.userTimezone,
-      studentTimezone
-    );
+    const [fromHours, fromMinutes] = fromTime.split(':').map(Number);
+    const [toHours, toMinutes] = toTime.split(':').map(Number);
     
-    return this.timezoneService.formatInTimezone(convertedDate, studentTimezone, {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZoneName: 'short'
+    const fromTotalMinutes = fromHours * 60 + fromMinutes;
+    const toTotalMinutes = toHours * 60 + toMinutes;
+    
+    // Ensure to time is after from time and at least 30 minutes difference
+    return toTotalMinutes > fromTotalMinutes && (toTotalMinutes - fromTotalMinutes) >= 30;
+  }
+
+  /**
+   * Check if schedule form is valid
+   */
+  isScheduleFormValid(): boolean {
+    if (!(this.selectedStudentUid && this.scheduleForm.startTime)) return false;
+    const endTime = this.computeEndTime(this.scheduleForm.startTime, this.scheduleForm.durationMinutes);
+    return this.isValidTimeRange(this.scheduleForm.startTime, endTime) && this.isScheduleStartTimeAvailable(this.scheduleForm.startTime);
+  }
+
+  /**
+   * Check if reschedule form is valid
+   */
+  isRescheduleFormValid(): boolean {
+    if (!(this.rescheduleForm.newDate && this.rescheduleForm.newStartTime)) return false;
+    const endTime = this.computeEndTime(this.rescheduleForm.newStartTime, this.rescheduleForm.durationMinutes);
+    return this.isValidTimeRange(this.rescheduleForm.newStartTime, endTime) && this.isRescheduleStartTimeAvailable(this.rescheduleForm.newStartTime);
+  }
+  private diffMinutes(start: string, end: string): number | null {
+    if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)) return null;
+    const [sh, sm] = start.split(':').map(Number);
+    const [eh, em] = end.split(':').map(Number);
+    return (eh*60+em) - (sh*60+sm);
+  }
+
+  private parseTimeSlot(slot: string): { start: number; end: number } | null {
+    if (!slot || !slot.includes(' - ')) return null;
+    const [a,b] = slot.split(' - ').map(s => s.trim());
+    if (!/^\d{2}:\d{2}$/.test(a) || !/^\d{2}:\d{2}$/.test(b)) return null;
+    const toMin = (t: string) => { const [h,m] = t.split(':').map(Number); return h*60+m; };
+    const sa = toMin(a); const sb = toMin(b);
+    return { start: sa, end: sb };
+  }
+
+  private computeEndTime(start: string, duration: number): string {
+    if (!/^\d{2}:\d{2}$/.test(start)) return start;
+    const [h,m] = start.split(':').map(Number);
+    const total = h*60 + m + duration;
+    const eh = Math.floor(total/60) % 24;
+    const em = total % 60;
+    return `${eh.toString().padStart(2,'0')}:${em.toString().padStart(2,'0')}`;
+  }
+
+  private computeRescheduleTimeOptions(): { time: string; available: boolean }[] {
+    const opts: { time: string; available: boolean }[] = [];
+    // window 05:00 - 22:00 (15-minute increments for finer rescheduling)
+    for (let min=5*60; min<=22*60; min+=15) {
+      const h = Math.floor(min/60); const m = min%60;
+      opts.push({ time: `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`, available: true });
+    }
+    if (!this.rescheduleForm.newDate) return opts;
+    const date = new Date(this.rescheduleForm.newDate);
+    // Gather classes that are on that date (exclude the one being rescheduled)
+    const sameDayClasses = this.classes.filter(c => {
+      if (this.reschedulingClass && c.id === this.reschedulingClass.id) return false;
+      const cd = new Date(c.classDate);
+      return cd.toDateString() === date.toDateString();
     });
+    const ranges = sameDayClasses.map(c => this.parseTimeSlot(c.timeSlot)).filter(Boolean) as {start:number; end:number}[];
+    const dur = this.rescheduleForm.durationMinutes;
+    return opts.map(o => {
+      const [h,m] = o.time.split(':').map(Number);
+      const startMin = h*60+m;
+      const endMin = startMin + dur;
+      const overlap = ranges.some(r => startMin < r.end && r.start < endMin);
+      return { time: o.time, available: !overlap };
+    });
+  }
+
+  isRescheduleStartTimeAvailable(time: string): boolean {
+    return this.rescheduleTimeOptions.find(o => o.time === time)?.available ?? true;
+  }
+
+  onRescheduleDateChange() {
+    this.rescheduleTimeOptions = this.computeRescheduleTimeOptions();
+    if (this.rescheduleForm.newStartTime && !this.isRescheduleStartTimeAvailable(this.rescheduleForm.newStartTime)) {
+      this.rescheduleForm.newStartTime = '';
+    }
+  }
+
+  onRescheduleDurationChange() {
+    this.rescheduleTimeOptions = this.computeRescheduleTimeOptions();
+    if (this.rescheduleForm.newStartTime && !this.isRescheduleStartTimeAvailable(this.rescheduleForm.newStartTime)) {
+      this.rescheduleForm.newStartTime = '';
+    }
+  }
+
+  onRescheduleStartTimeChange() {
+    // no-op aside from validation trigger (template uses binding)
+  }
+
+  // Called from template after form control changes to refresh preview (availability already handled in specific handlers)
+  updatePreviewTimes() {
+    // Ensure options reflect any duration/date change if handlers missed
+    this.rescheduleTimeOptions = this.computeRescheduleTimeOptions();
   }
 
   /**
@@ -495,6 +789,89 @@ export class CalendarComponent implements OnInit {
       // Update the editing slot date to reflect the new timezone
       // This ensures the preview times are recalculated
       this.mapClassesToSlots();
+    }
+    // Also remap even if not editing
+    this.mapClassesToSlots();
+  }
+
+  // ===== Schedule availability utilities (for creating new classes) =====
+  private computeScheduleTimeOptions(): { time: string; available: boolean }[] {
+    const opts: { time: string; available: boolean }[] = [];
+    if (!this.editingSlot) return opts;
+    const date = this.editingSlot.date;
+    for (let min=5*60; min<=22*60; min+=15) {
+      const h = Math.floor(min/60); const m = min%60;
+      opts.push({ time: `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`, available: true });
+    }
+    const sameDayClasses = this.classes.filter(c => {
+      const cd = new Date(c.classDate);
+      return cd.toDateString() === date.toDateString();
+    });
+    const ranges = sameDayClasses.map(c => this.parseTimeSlot(c.timeSlot)).filter(Boolean) as {start:number; end:number}[];
+    const dur = this.scheduleForm.durationMinutes;
+    return opts.map(o => {
+      const [h,m] = o.time.split(':').map(Number);
+      const startMin = h*60+m;
+      const endMin = startMin + dur;
+      const overlap = ranges.some(r => startMin < r.end && r.start < endMin);
+      return { time: o.time, available: !overlap };
+    });
+  }
+
+  isScheduleStartTimeAvailable(time: string): boolean {
+    return this.scheduleTimeOptions.find(o => o.time === time)?.available ?? true;
+  }
+
+  onScheduleDurationChange() {
+    this.scheduleTimeOptions = this.computeScheduleTimeOptions();
+    if (this.scheduleForm.startTime && !this.isScheduleStartTimeAvailable(this.scheduleForm.startTime)) {
+      const first = this.scheduleTimeOptions.find(o => o.available);
+      this.scheduleForm.startTime = first ? first.time : '';
+    }
+  }
+
+  onScheduleStartTimeChange() {
+    // validation via bindings
+  }
+
+  /**
+   * Convert a UTC date (or assumed UTC) into a Date representing the wall-clock time in target timezone
+   * for purposes of grid placement. We construct a new Date in local environment using the parts for the
+   * target timezone so hours/days align with teacher's selected zone.
+   */
+  private getDisplayDateForTimezone(utcDate: Date, timezoneCode: string): Date {
+    try {
+      if (!(utcDate instanceof Date) || isNaN(utcDate.getTime())) {
+        return utcDate;
+      }
+      // Map short code to IANA if available
+      const tzEntry = this.availableTimezones.find(t => t.code === timezoneCode);
+      const iana = tzEntry?.timezone || timezoneCode;
+      const options: Intl.DateTimeFormatOptions = {
+        timeZone: iana,
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false
+      };
+      const parts = new Intl.DateTimeFormat('en-US', options).formatToParts(utcDate);
+      const lookup: any = {};
+      for (const p of parts) {
+        if (p.type !== 'literal') lookup[p.type] = p.value;
+      }
+      const year = parseInt(lookup.year, 10);
+      const month = parseInt(lookup.month, 10); // 1-based
+      const day = parseInt(lookup.day, 10);
+      const hour = parseInt(lookup.hour, 10);
+      const minute = parseInt(lookup.minute ?? '0', 10);
+      const second = parseInt(lookup.second ?? '0', 10);
+      if ([year, month, day, hour].some(n => isNaN(n))) {
+        return utcDate; // insufficient data; fallback
+      }
+      // Construct a date in local timezone that represents the wall time in target timezone.
+      return new Date(year, month - 1, day, hour, minute, second, 0);
+    } catch (e) {
+      console.warn('getDisplayDateForTimezone failed, fallback to original date', e);
+      return utcDate;
     }
   }
 }

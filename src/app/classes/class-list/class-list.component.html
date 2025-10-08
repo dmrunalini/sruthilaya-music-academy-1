@@ -1,15 +1,8 @@
 <div class="class-list">
   <div *ngIf="!isTeacher && displayName" class="welcome">Welcome, {{ displayName }}!</div>
-  <div class="header-section">
-    <h2>Classes</h2>
-    <div class="timezone-selector">
-      <label for="userTimezone">Your Timezone:</label>
-      <select id="userTimezone" [(ngModel)]="userTimezone" class="timezone-select">
-        <option *ngFor="let tz of availableTimezones" [value]="tz.code">
-          {{ tz.name }} ({{ tz.code }})
-        </option>
-      </select>
-    </div>
+  <h2>Classes</h2>
+  <div class="timezone-indicator">
+    <small>Times shown in: {{ getUserTimezoneDisplayName() }}</small>
   </div>
   <div class="week-nav">
     <button (click)="prevWeek()">⟨ Prev Week</button>

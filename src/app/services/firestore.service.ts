@@ -25,7 +25,20 @@ export class FirestoreService {
   }
 
   getUser(userId: string): Observable<User | undefined> {
-    return from(getDoc(doc(db, 'users', userId)).then(s => s.exists() ? (s.data() as User) : undefined));
+    // Real-time user document stream so profile (e.g. timezone) changes propagate instantly
+    return new Observable<User | undefined>(subscriber => {
+      const ref = doc(db, 'users', userId);
+      const unsub = onSnapshot(ref, snap => {
+        if (snap.exists()) {
+          const data = snap.data() as User;
+            // attach uid for convenience
+          subscriber.next({ uid: snap.id, ...data });
+        } else {
+          subscriber.next(undefined);
+        }
+      }, err => subscriber.error(err));
+      return () => unsub();
+    });
   }
 
   getUsers(): Observable<User[]> {

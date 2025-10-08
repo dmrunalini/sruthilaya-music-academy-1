@@ -57,6 +57,41 @@ async function seedFile(filePath) {
     const id = docCopy.id || firestore.collection(collectionName).doc().id;
     delete docCopy.id;
     convertIsoStringsToTimestamps(docCopy);
+
+    // Domain-specific normalization for classes collection
+    if (collectionName === 'classes') {
+      try {
+        // Map legacy studentId -> studentUid expected by app
+        if (docCopy.studentId && !docCopy.studentUid) {
+          docCopy.studentUid = docCopy.studentId;
+          delete docCopy.studentId;
+        }
+        // Ensure classDate exists (prefer provided classDate else start)
+        if (!docCopy.classDate && docCopy.start) {
+          docCopy.classDate = docCopy.start;
+        }
+        // Derive utcDate if missing
+        if (!docCopy.utcDate && docCopy.classDate) {
+          docCopy.utcDate = docCopy.classDate;
+        }
+        // Build timeSlot from start/end if missing
+        if (!docCopy.timeSlot && docCopy.start && docCopy.end) {
+          const toDate = (v) => v && typeof v.toDate === 'function' ? v.toDate() : (v instanceof Date ? v : new Date(v));
+          const startD = toDate(docCopy.start);
+          const endD = toDate(docCopy.end);
+          if (!isNaN(startD) && !isNaN(endD)) {
+            const fmt = (d) => d.toISOString().substring(11,16); // HH:MM in UTC
+            docCopy.timeSlot = `${fmt(startD)} - ${fmt(endD)}`;
+          }
+        }
+        // Provide default timezone if absent
+        if (!docCopy.timezone) {
+          docCopy.timezone = 'UTC';
+        }
+      } catch (e) {
+        console.warn('Normalization error for class doc', id, e);
+      }
+    }
     const docRef = firestore.collection(collectionName).doc(id);
     batch.set(docRef, docCopy);
     opCount++;

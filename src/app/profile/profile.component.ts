@@ -68,7 +68,10 @@ export class ProfileComponent {
     try {
       const updated = { ...(this.form.value as any) };
       Object.keys(updated).forEach(k => { if (updated[k] === '') delete updated[k]; });
-      await firstValueFrom(this.firestore.updateUser(this.uid, updated as any));
+  await firstValueFrom(this.firestore.updateUser(this.uid, updated as any));
+  // Immediately push update into auth cache so any listeners (calendar) react at once
+  this.auth.updateCachedUser(updated);
+      
       this.message = 'Profile saved.';
     } catch (err: any) {
       this.error = err?.message || 'Failed to save profile';
@@ -90,4 +93,6 @@ export class ProfileComponent {
       this.error = err?.message || 'Failed to change password';
     }
   }
+
+
 }

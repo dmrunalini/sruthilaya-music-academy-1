@@ -67,6 +67,7 @@ export class ClassListComponent implements OnInit {
     this.userTimezone = user?.timezone || 'IST';
     // react to auth/profile changes
     this.authService.user$.subscribe(u => {
+      const oldTimezone = this.userTimezone;
       this.isTeacher = !!(u && u.role === 'teacher');
       // when a user logs in, if they are authenticated, load classes
       if (u) {
@@ -76,6 +77,11 @@ export class ClassListComponent implements OnInit {
       this.filterVisibleClasses();
       this.currentUserName = u?.name || null;
       this.userTimezone = u?.timezone || 'IST';
+      
+      // If timezone changed, trigger a view update by re-filtering classes
+      if (oldTimezone !== this.userTimezone) {
+        this.filterVisibleClasses();
+      }
     });
   }
 
@@ -236,38 +242,21 @@ export class ClassListComponent implements OnInit {
   }
 
   /**
-   * Format a class time for display in the user's timezone
+   * Format a class time for display in the user's timezone (clean and simple)
    */
   formatClassTime(classInfo: Class): string {
     if (!classInfo || !classInfo.classDate) return '';
     
     const classDate = new Date(classInfo.classDate);
-    const originalTimezone = (classInfo as any).timezone || 'UTC';
-    
-    // If the class has a different timezone than the user's, convert it
-    if (originalTimezone !== this.userTimezone) {
-      const convertedDate = this.timezoneService.convertTimezone(
-        classDate, 
-        originalTimezone, 
-        this.userTimezone
-      );
-      return this.timezoneService.formatInTimezone(convertedDate, this.userTimezone, {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZoneName: 'short'
-      });
-    }
-    
-    return this.timezoneService.formatInTimezone(classDate, this.userTimezone, {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZoneName: 'short'
-    });
+    // Use the simplified timezone formatting
+    return this.timezoneService.formatInUserTimezone(classDate, this.userTimezone);
+  }
+
+  /**
+   * Get the display name for the user's timezone
+   */
+  getUserTimezoneDisplayName(): string {
+    const timezone = this.availableTimezones.find(tz => tz.code === this.userTimezone);
+    return timezone ? timezone.name : this.userTimezone;
   }
 }

@@ -42,6 +42,14 @@
       <option value="teacher">Teacher</option>
     </select>
 
+    <label>Your Timezone</label>
+    <select formControlName="timezone">
+      <option *ngFor="let tz of availableTimezones" [value]="tz.code">
+        {{ tz.name }} ({{ tz.code }})
+      </option>
+    </select>
+    <div class="error" *ngIf="signupForm.get('timezone')?.touched && signupForm.get('timezone')?.invalid">Please select your timezone</div>
+
     <label>Teams link (optional)</label>
   <input formControlName="teamsLink" />
   <div class="error" *ngIf="signupForm.get('teamsLink')?.touched && signupForm.get('teamsLink')?.invalid">Enter a valid URL for Teams</div>
