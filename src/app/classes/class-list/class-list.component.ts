@@ -2,6 +2,7 @@ import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { FirestoreService } from '../../services/firestore.service';
 import { Class } from '../../models/class.model';
 import { AuthService } from '../../services/auth.service';
+import { TimezoneService } from '../../services/timezone.service';
 import { auth } from '../../firebase';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -22,6 +23,8 @@ export class ClassListComponent implements OnInit {
   isSubmitting = false;
   @ViewChild('newClassInput', { static: false }) newClassInput?: ElementRef<HTMLInputElement>;
   currentUserName: string | null = null;
+  userTimezone = 'IST'; // Default timezone
+  availableTimezones = this.timezoneService.getAvailableTimezones();
 
   get displayName(): string | null {
     if (this.currentUserName) return this.currentUserName;
@@ -40,7 +43,11 @@ export class ClassListComponent implements OnInit {
   maxWeekOffset = 26; // ~6 months forward
   visibleClasses: Class[] = [];
 
-  constructor(private firestoreService: FirestoreService, private authService: AuthService) {}
+  constructor(
+    private firestoreService: FirestoreService, 
+    private authService: AuthService,
+    private timezoneService: TimezoneService
+  ) {}
 
   get minDate(): string {
     const today = new Date();
@@ -57,6 +64,7 @@ export class ClassListComponent implements OnInit {
     const user = this.authService.getUserData();
     this.isTeacher = !!(user && user.role === 'teacher');
     this.currentUserName = user?.name || null;
+    this.userTimezone = user?.timezone || 'IST';
     // react to auth/profile changes
     this.authService.user$.subscribe(u => {
       this.isTeacher = !!(u && u.role === 'teacher');
@@ -67,6 +75,7 @@ export class ClassListComponent implements OnInit {
       // re-filter visible classes when the auth/profile changes (important for students)
       this.filterVisibleClasses();
       this.currentUserName = u?.name || null;
+      this.userTimezone = u?.timezone || 'IST';
     });
   }
 
@@ -224,5 +233,41 @@ export class ClassListComponent implements OnInit {
     } catch (err) {
       console.error('Error deleting class', err);
     }
+  }
+
+  /**
+   * Format a class time for display in the user's timezone
+   */
+  formatClassTime(classInfo: Class): string {
+    if (!classInfo || !classInfo.classDate) return '';
+    
+    const classDate = new Date(classInfo.classDate);
+    const originalTimezone = (classInfo as any).timezone || 'UTC';
+    
+    // If the class has a different timezone than the user's, convert it
+    if (originalTimezone !== this.userTimezone) {
+      const convertedDate = this.timezoneService.convertTimezone(
+        classDate, 
+        originalTimezone, 
+        this.userTimezone
+      );
+      return this.timezoneService.formatInTimezone(convertedDate, this.userTimezone, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZoneName: 'short'
+      });
+    }
+    
+    return this.timezoneService.formatInTimezone(classDate, this.userTimezone, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZoneName: 'short'
+    });
   }
 }

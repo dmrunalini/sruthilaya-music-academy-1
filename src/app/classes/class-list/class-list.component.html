@@ -1,6 +1,16 @@
 <div class="class-list">
   <div *ngIf="!isTeacher && displayName" class="welcome">Welcome, {{ displayName }}!</div>
-  <h2>Classes</h2>
+  <div class="header-section">
+    <h2>Classes</h2>
+    <div class="timezone-selector">
+      <label for="userTimezone">Your Timezone:</label>
+      <select id="userTimezone" [(ngModel)]="userTimezone" class="timezone-select">
+        <option *ngFor="let tz of availableTimezones" [value]="tz.code">
+          {{ tz.name }} ({{ tz.code }})
+        </option>
+      </select>
+    </div>
+  </div>
   <div class="week-nav">
     <button (click)="prevWeek()">⟨ Prev Week</button>
     <div class="week-range">{{ days[0] | date: 'MMM d' }} - {{ days[6] | date: 'MMM d, yyyy' }}</div>
@@ -15,7 +25,7 @@
   <div *ngIf="visibleClasses && visibleClasses.length > 0; else empty">
     <ul>
       <li *ngFor="let cls of visibleClasses">
-    <div class="cls-datetime">{{ cls.classDate | date: 'EEE, MMM d, h:mm a' }}</div>
+        <div class="cls-datetime">{{ formatClassTime(cls) }}</div>
         <button *ngIf="isTeacher" (click)="removeClass(cls.id)">Delete</button>
       </li>
     </ul>

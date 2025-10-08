@@ -34,6 +34,14 @@
     <input formControlName="teamsLink" placeholder="https://teams.example.com/.." />
     <div class="error" *ngIf="form.get('teamsLink')?.touched && form.get('teamsLink')?.invalid">Enter a valid URL</div>
 
+    <label>Timezone</label>
+    <select formControlName="timezone">
+      <option *ngFor="let tz of availableTimezones" [value]="tz.code">
+        {{ tz.name }} ({{ tz.code }})
+      </option>
+    </select>
+    <div class="error" *ngIf="form.get('timezone')?.touched && form.get('timezone')?.invalid">Please select a timezone</div>
+
     <div class="actions">
       <button type="submit" [disabled]="form.invalid">Save profile</button>
       <button type="button" (click)="pwModalOpen = true">Change password</button>

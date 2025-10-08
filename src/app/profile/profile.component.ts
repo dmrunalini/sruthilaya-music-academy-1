@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { FirestoreService } from '../services/firestore.service';
 import { AuthService } from '../services/auth.service';
+import { TimezoneService } from '../services/timezone.service';
 import { firstValueFrom } from 'rxjs';
 
 @Component({
@@ -22,7 +23,8 @@ export class ProfileComponent {
     phone: ['', [Validators.pattern(this.phonePattern)]],
     age: ['', [Validators.min(5), Validators.max(120)]],
     gender: [''],
-    teamsLink: ['', Validators.pattern(this.urlPattern)]
+    teamsLink: ['', Validators.pattern(this.urlPattern)],
+    timezone: ['IST', Validators.required]
   });
 
   pwform = this.fb.group({
@@ -35,8 +37,14 @@ export class ProfileComponent {
   message = '';
   error = '';
   private uid?: string;
+  availableTimezones = this.timezoneService.getAvailableTimezones();
 
-  constructor(private fb: FormBuilder, private firestore: FirestoreService, private auth: AuthService) {
+  constructor(
+    private fb: FormBuilder, 
+    private firestore: FirestoreService, 
+    private auth: AuthService,
+    private timezoneService: TimezoneService
+  ) {
     const user = this.auth.getUserData();
     if (user) {
       this.uid = user.uid;
@@ -46,7 +54,8 @@ export class ProfileComponent {
         phone: user.phone || '',
         age: user.age != null ? String(user.age) : '',
         gender: user.gender || '',
-        teamsLink: (user as any).teamsLink || ''
+        teamsLink: (user as any).teamsLink || '',
+        timezone: user.timezone || 'IST'
       });
     }
   }

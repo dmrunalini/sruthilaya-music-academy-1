@@ -1,6 +1,44 @@
 .class-list {
 	padding: 1rem;
 
+	.header-section {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 1rem;
+		flex-wrap: wrap;
+		gap: 1rem;
+
+		h2 {
+			margin: 0;
+		}
+
+		.timezone-selector {
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+			font-size: 0.9rem;
+
+			label {
+				color: #666;
+				font-weight: 500;
+			}
+
+			.timezone-select {
+				padding: 0.25rem 0.5rem;
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				background: white;
+				font-size: 0.9rem;
+				
+				&:focus {
+					outline: none;
+					border-color: #007bff;
+				}
+			}
+		}
+	}
+
 	.week-nav {
 		display: flex;
 		align-items: center;

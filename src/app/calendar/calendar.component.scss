@@ -2,10 +2,55 @@
 	padding: 1rem;
 	.calendar-header {
 		display: flex;
-		gap: 1rem;
+		justify-content: space-between;
 		align-items: center;
-		justify-content: center;
 		margin-bottom: 0.5rem;
+		flex-wrap: wrap;
+		gap: 1rem;
+		
+		.navigation {
+			display: flex;
+			gap: 1rem;
+			align-items: center;
+			
+			.toggle-hours-btn {
+				background: #f8f9fa;
+				border: 1px solid #dee2e6;
+				padding: 0.375rem 0.75rem;
+				border-radius: 4px;
+				font-size: 0.875rem;
+				cursor: pointer;
+				
+				&:hover {
+					background: #e9ecef;
+				}
+			}
+		}
+		
+		.timezone-selector {
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+			font-size: 0.9rem;
+
+			label {
+				color: #666;
+				font-weight: 500;
+			}
+
+			.timezone-select {
+				padding: 0.25rem 0.5rem;
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				background: white;
+				font-size: 0.9rem;
+				
+				&:focus {
+					outline: none;
+					border-color: #007bff;
+				}
+			}
+		}
 	}
 
 	.calendar-table-wrap {
@@ -48,6 +93,18 @@
 		padding: 6px;
 		border-radius: 6px;
 		border: 2px solid #f08080;
+		
+		.student {
+			font-weight: bold;
+			margin-bottom: 2px;
+			font-size: 11px;
+		}
+		
+		.time-info {
+			font-size: 9px;
+			color: #666;
+			font-weight: normal;
+		}
 	}
 
 	/* visual for empty slots */
@@ -74,9 +131,346 @@
 
 	.assign-panel {
 		margin-top: 1rem;
-		padding: 0.75rem;
+		padding: 1.5rem;
 		border: 1px solid #ddd;
 		background: #fff;
-		max-width: 480px;
+		max-width: 500px;
+		border-radius: 8px;
+		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+
+		h3 {
+			margin: 0 0 1.5rem 0;
+			color: #333;
+			font-size: 1.25rem;
+		}
+
+		.form-group {
+			margin-bottom: 1rem;
+
+			label {
+				display: block;
+				margin-bottom: 0.5rem;
+				font-weight: 500;
+				color: #555;
+			}
+
+			select {
+				width: 100%;
+				padding: 0.75rem;
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				font-size: 1rem;
+				background: white;
+
+				&:focus {
+					outline: none;
+					border-color: #007bff;
+					box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+				}
+			}
+
+			.timezone-select {
+				font-size: 0.9rem;
+			}
+		}
+
+		.time-preview {
+			background: #f8f9fa;
+			border: 1px solid #e9ecef;
+			border-radius: 4px;
+			padding: 1rem;
+			margin-bottom: 1rem;
+
+			.preview-row {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				margin-bottom: 0.5rem;
+
+				&:last-child {
+					margin-bottom: 0;
+				}
+
+				.preview-label {
+					font-weight: 500;
+					color: #666;
+				}
+
+				.preview-time {
+					font-family: 'Courier New', monospace;
+					font-weight: bold;
+					color: #007bff;
+					background: white;
+					padding: 0.25rem 0.5rem;
+					border-radius: 3px;
+					border: 1px solid #dee2e6;
+				}
+			}
+		}
+
+		.button-group {
+			display: flex;
+			gap: 1rem;
+			justify-content: flex-end;
+
+			button {
+				padding: 0.75rem 1.5rem;
+				border: none;
+				border-radius: 4px;
+				font-weight: 500;
+				cursor: pointer;
+				transition: all 0.2s;
+
+				&:first-child {
+					background: #007bff;
+					color: white;
+
+					&:hover:not(:disabled) {
+						background: #0056b3;
+					}
+
+					&:disabled {
+						background: #6c757d;
+						cursor: not-allowed;
+					}
+				}
+
+				&:last-child {
+					background: #6c757d;
+					color: white;
+
+					&:hover {
+						background: #545b62;
+					}
+				}
+			}
+		}
+	}
+
+	// Reschedule Modal Styles
+	.reschedule-modal {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		z-index: 1000;
+		
+		.modal-backdrop {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background: rgba(0, 0, 0, 0.5);
+		}
+		
+		.modal-content {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			background: white;
+			border-radius: 8px;
+			box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+			width: 90%;
+			max-width: 500px;
+			max-height: 90vh;
+			display: flex;
+			flex-direction: column;
+		}
+		
+		.modal-header {
+			padding: 1.5rem;
+			border-bottom: 1px solid #dee2e6;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			
+			h3 {
+				margin: 0;
+				color: #333;
+			}
+			
+			.close-btn {
+				background: none;
+				border: none;
+				font-size: 1.5rem;
+				cursor: pointer;
+				padding: 0;
+				width: 30px;
+				height: 30px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				
+				&:hover {
+					background: #f8f9fa;
+					border-radius: 50%;
+				}
+			}
+		}
+		
+		.modal-body {
+			padding: 1.5rem;
+			flex: 1;
+			overflow-y: auto;
+			
+			.class-info {
+				background: #f8f9fa;
+				padding: 1rem;
+				border-radius: 4px;
+				margin-bottom: 1.5rem;
+				
+				p {
+					margin: 0.5rem 0;
+					
+					&:first-child {
+						margin-top: 0;
+					}
+					
+					&:last-child {
+						margin-bottom: 0;
+					}
+					
+					&.student-time {
+						color: #007bff;
+						font-style: italic;
+					}
+				}
+			}
+			
+			.timezone-info {
+				background: #e3f2fd;
+				padding: 1rem;
+				border-radius: 4px;
+				margin-bottom: 1.5rem;
+				border-left: 4px solid #2196f3;
+				
+				p {
+					margin: 0.5rem 0;
+					
+					&:first-child {
+						margin-top: 0;
+					}
+				}
+				
+				.timezone-selector-inline {
+					display: flex;
+					align-items: center;
+					gap: 0.5rem;
+					margin-top: 0.75rem;
+					
+					label {
+						font-weight: 500;
+						color: #333;
+						margin-bottom: 0;
+					}
+					
+					.timezone-select-small {
+						padding: 0.25rem 0.5rem;
+						border: 1px solid #ddd;
+						border-radius: 4px;
+						background: white;
+						font-size: 0.85rem;
+						
+						&:focus {
+							outline: none;
+							border-color: #007bff;
+							box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+						}
+					}
+				}
+			}
+			
+			.preview-times {
+				background: #fff3cd;
+				padding: 1rem;
+				border-radius: 4px;
+				margin-top: 1rem;
+				border-left: 4px solid #ffc107;
+				
+				p {
+					margin: 0.25rem 0;
+					
+					&:first-child {
+						margin-top: 0;
+						font-weight: 600;
+						color: #856404;
+					}
+					
+					&:last-child {
+						margin-bottom: 0;
+					}
+				}
+			}
+			
+			.reschedule-form {
+				.form-group {
+					margin-bottom: 1rem;
+					
+					label {
+						display: block;
+						margin-bottom: 0.5rem;
+						font-weight: 500;
+						color: #333;
+					}
+					
+					.form-control {
+						width: 100%;
+						padding: 0.75rem;
+						border: 1px solid #ddd;
+						border-radius: 4px;
+						font-size: 1rem;
+						
+						&:focus {
+							outline: none;
+							border-color: #007bff;
+							box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+						}
+					}
+				}
+			}
+		}
+		
+		.modal-footer {
+			padding: 1.5rem;
+			border-top: 1px solid #dee2e6;
+			display: flex;
+			justify-content: flex-end;
+			gap: 1rem;
+			
+			.btn {
+				padding: 0.75rem 1.5rem;
+				border: none;
+				border-radius: 4px;
+				font-weight: 500;
+				cursor: pointer;
+				transition: all 0.2s;
+				
+				&:disabled {
+					opacity: 0.6;
+					cursor: not-allowed;
+				}
+				
+				&.btn-secondary {
+					background: #6c757d;
+					color: white;
+					
+					&:hover:not(:disabled) {
+						background: #545b62;
+					}
+				}
+				
+				&.btn-primary {
+					background: #007bff;
+					color: white;
+					
+					&:hover:not(:disabled) {
+						background: #0056b3;
+					}
+				}
+			}
+		}
 	}
 }

@@ -2,6 +2,15 @@
   <div class="header">
     <h2>Students Dashboard</h2>
     <p class="subtitle">{{ currentMonth }} Overview</p>
+    
+    <div class="timezone-selector">
+      <label for="timezone">Your Timezone:</label>
+      <select id="timezone" [(ngModel)]="teacherTimezone" class="timezone-select">
+        <option *ngFor="let tz of availableTimezones" [value]="tz.code">
+          {{ tz.name }} ({{ tz.code }})
+        </option>
+      </select>
+    </div>
   </div>
 
   <div *ngIf="loading" class="loading">
@@ -37,12 +46,10 @@
         <thead>
           <tr>
             <th>Student Name</th>
-            <th>Email</th>
-            <th>Phone</th>
-            <th>Classes Today</th>
             <th>Classes This Month</th>
             <th>Fee Status</th>
             <th>Last Payment</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -52,18 +59,6 @@
                 <strong>{{ student.name }}</strong>
                 <small *ngIf="student.age">({{ student.age }} years)</small>
               </div>
-            </td>
-            <td>{{ student.email }}</td>
-            <td>
-              <span *ngIf="student.phone">
-                {{ student.countryCode || '+91' }} {{ student.phone }}
-              </span>
-              <span *ngIf="!student.phone" class="no-data">-</span>
-            </td>
-            <td class="classes-count">
-              <span class="badge" [class.highlight]="student.remainingClassesToday > 0">
-                {{ student.remainingClassesToday }}
-              </span>
             </td>
             <td class="classes-count">
               <span class="badge" [class.highlight]="student.remainingClassesThisMonth > 0">
@@ -81,12 +76,121 @@
               </span>
               <span *ngIf="!student.lastPaymentDate" class="no-data">-</span>
             </td>
+            <td class="actions-cell">
+              <button class="action-btn schedule-btn" (click)="openRecurringClassModal(student)" title="Schedule Recurring Classes">
+                📅 Schedule Classes
+              </button>
+            </td>
           </tr>
         </tbody>
       </table>
 
       <div *ngIf="students.length === 0" class="empty-state">
         <p>No students found.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recurring Classes Modal -->
+<div class="modal-overlay" *ngIf="showRecurringModal" (click)="closeRecurringModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Schedule Recurring Classes</h3>
+      <button class="close-btn" (click)="closeRecurringModal()">✕</button>
+    </div>
+    
+    <div class="modal-body">
+      <div class="form-section">
+        <h4>Student: {{ getSelectedStudent()?.name }}</h4>
+
+        <div class="form-group">
+          <label>Select Days *</label>
+          <div class="days-selection">
+            <div *ngFor="let day of weekDays" class="day-checkbox">
+              <input 
+                type="checkbox" 
+                [id]="'day-' + day.value"
+                [checked]="isDaySelected(day.value)"
+                (change)="onDaySelectionChange(day.value, $event)">
+              <label [for]="'day-' + day.value">{{ day.label }}</label>
+            </div>
+          </div>
+          <small class="selected-days">Selected: {{ getSelectedDaysText() }}</small>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="time">Time ({{ teacherTimezone }}) *</label>
+            <input 
+              id="time"
+              type="time" 
+              [(ngModel)]="recurringForm.time"
+              required>
+          </div>
+
+          <div class="form-group">
+            <label for="startDate">Start Date *</label>
+            <input 
+              id="startDate"
+              type="date" 
+              [(ngModel)]="recurringForm.startDate"
+              [min]="minDate"
+              required>
+          </div>
+        </div>
+
+        <div class="timezone-info-box" *ngIf="recurringForm.time">
+          <div class="timezone-row">
+            <span class="timezone-label">Your time ({{ teacherTimezone }}):</span>
+            <span class="timezone-time">{{ recurringForm.time }}</span>
+          </div>
+          <div class="timezone-row" *ngIf="getSelectedStudent()?.timezone && getSelectedStudent()?.timezone !== teacherTimezone">
+            <span class="timezone-label">Student's time ({{ getSelectedStudent()?.timezone }}):</span>
+            <span class="timezone-time">{{ getConvertedTimeForStudent() }}</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="monthsToGenerate">Generate for (months) *</label>
+          <select id="monthsToGenerate" [(ngModel)]="recurringForm.monthsToGenerate">
+            <option value="3">3 months</option>
+            <option value="6">6 months</option>
+            <option value="9">9 months</option>
+            <option value="12">12 months</option>
+          </select>
+        </div>
+
+        <div class="preview-section" *ngIf="recurringForm.selectedDays.length > 0">
+          <h5>Preview:</h5>
+          <p><strong>Classes:</strong> {{ getSelectedDaysText() }} at {{ recurringForm.time }}</p>
+          <p><strong>Duration:</strong> {{ recurringForm.monthsToGenerate }} months starting {{ recurringForm.startDate | date: 'MMM d, yyyy' }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button 
+        class="btn btn-danger" 
+        (click)="resetFutureClasses()"
+        [disabled]="creatingClasses || resettingClasses">
+        <span *ngIf="resettingClasses">Resetting...</span>
+        <span *ngIf="!resettingClasses">🗑️ Reset Future Classes</span>
+      </button>
+      <div class="button-group">
+        <button 
+          class="btn btn-secondary" 
+          (click)="closeRecurringModal()"
+          [disabled]="creatingClasses || resettingClasses">
+          Cancel
+        </button>
+        <button 
+          class="btn btn-primary" 
+          (click)="createRecurringClasses()"
+          [disabled]="!isFormValid() || creatingClasses || resettingClasses">
+          <span *ngIf="creatingClasses">Creating...</span>
+          <span *ngIf="!creatingClasses">Create Classes</span>
+        </button>
       </div>
     </div>
   </div>

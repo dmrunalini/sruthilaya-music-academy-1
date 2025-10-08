@@ -1,9 +1,23 @@
 <div class="calendar">
   <div class="calendar-header">
-    <button (click)="prevWeek()">⟨ Prev</button>
-  <div class="month">{{ weekRange }}</div>
-    <button (click)="nextWeek()">Next ⟩</button>
-    <button (click)="goToCurrentWeek()">Today</button>
+    <div class="navigation">
+      <button (click)="prevWeek()">⟨ Prev</button>
+      <div class="month">{{ weekRange }}</div>
+      <button (click)="nextWeek()">Next ⟩</button>
+      <button (click)="goToCurrentWeek()">Today</button>
+      <button (click)="toggleHoursView()" class="toggle-hours-btn">
+        {{ showAllHours ? 'Show Active Hours' : 'Show All Hours' }}
+      </button>
+    </div>
+    
+    <div class="timezone-selector">
+      <label for="userTimezone">Your Timezone:</label>
+      <select id="userTimezone" [(ngModel)]="userTimezone" class="timezone-select">
+        <option *ngFor="let tz of availableTimezones" [value]="tz.code">
+          {{ tz.name }} ({{ tz.code }})
+        </option>
+      </select>
+    </div>
   </div>
 
   <div class="calendar-table-wrap">
@@ -16,10 +30,11 @@
       </thead>
       <tbody>
         <tr *ngFor="let h of hours; let hi = index">
-          <td class="hour-cell">{{ h }}:00</td>
+          <td class="hour-cell">{{ formatHour(h) }}</td>
           <td *ngFor="let d of days; let di = index" (click)="onSlotClick(slots[hi][di])" [class.occupied]="slots[hi][di].classId">
             <div *ngIf="slots[hi][di].classInfo" class="slot-filled">
               <div class="student">{{ slots[hi][di].classInfo.studentName }}</div>
+              <div class="time-info">{{ formatClassTime(slots[hi][di].classInfo) }}</div>
             </div>
             <div *ngIf="!slots[hi][di].classInfo" class="slot-empty"></div>
           </td>
@@ -29,14 +44,101 @@
   </div>
 
   <div *ngIf="editingSlot" class="assign-panel">
-    <h3>Assign Class - {{ editingSlot.date | date: 'EEE dd, h:mm a' }}</h3>
-    <label>Student</label>
-    <select [(ngModel)]="selectedStudentUid">
-      <option value="">Select student</option>
-      <option *ngFor="let s of users" [value]="s.uid">{{ s.name }}</option>
-    </select>
+    <h3>Schedule Class - {{ editingSlot.date | date: 'EEE dd, h:mm a' }}</h3>
+    
+    <div class="form-group">
+      <label>Student</label>
+      <select [(ngModel)]="selectedStudentUid">
+        <option value="">Select student</option>
+        <option *ngFor="let s of users" [value]="s.uid">{{ s.name }}</option>
+      </select>
+    </div>
 
-  <button (click)="assignClass()">Save</button>
-    <button (click)="editingSlot = null">Cancel</button>
+    <div class="form-group">
+      <label>Your Timezone</label>
+      <select [(ngModel)]="userTimezone" class="timezone-select" (change)="onTimezoneChange()">
+        <option *ngFor="let tz of availableTimezones" [value]="tz.code">
+          {{ tz.name }} ({{ tz.code }})
+        </option>
+      </select>
+    </div>
+
+    <div class="time-preview" *ngIf="selectedStudentUid && editingSlot">
+      <div class="preview-row">
+        <span class="preview-label">Your time ({{ userTimezone }}):</span>
+        <span class="preview-time">{{ editingSlot.date | date: 'EEE, MMM dd, h:mm a' }}</span>
+      </div>
+      <div class="preview-row" *ngIf="getSelectedStudentTimezone() && getSelectedStudentTimezone() !== userTimezone">
+        <span class="preview-label">Student's time ({{ getSelectedStudentTimezone() }}):</span>
+        <span class="preview-time">{{ getStudentTimePreview() }}</span>
+      </div>
+    </div>
+
+    <div class="button-group">
+      <button (click)="assignClass()" [disabled]="!selectedStudentUid">Schedule Class</button>
+      <button (click)="editingSlot = null">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Reschedule Modal -->
+  <div *ngIf="reschedulingClass" class="reschedule-modal">
+    <div class="modal-backdrop" (click)="closeRescheduleModal()"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Reschedule Class</h3>
+        <button class="close-btn" (click)="closeRescheduleModal()">×</button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="class-info">
+          <p><strong>Student:</strong> {{ reschedulingClass.studentName }}</p>
+          <p><strong>Current Time (Your timezone):</strong> {{ formatClassTime(reschedulingClass) }}</p>
+          <p *ngIf="reschedulingClass.studentTimezone && reschedulingClass.studentTimezone !== userTimezone" class="student-time">
+            <strong>Student's timezone ({{ reschedulingClass.studentTimezone }}):</strong> 
+            {{ formatTimeInStudentTimezone(reschedulingClass) }}
+          </p>
+        </div>
+        
+        <div class="timezone-info">
+          <p><strong>Scheduling in:</strong> {{ userTimezone }} timezone</p>
+          <div class="timezone-selector-inline">
+            <label for="teacherTimezone">Your Timezone:</label>
+            <select id="teacherTimezone" [(ngModel)]="userTimezone" class="timezone-select-small">
+              <option *ngFor="let tz of availableTimezones" [value]="tz.code">
+                {{ tz.name }} ({{ tz.code }})
+              </option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="reschedule-form">
+          <div class="form-group">
+            <label for="newDate">New Date:</label>
+            <input type="date" id="newDate" [(ngModel)]="rescheduleForm.newDate" class="form-control">
+          </div>
+          
+          <div class="form-group">
+            <label for="newTime">New Time ({{ userTimezone }}):</label>
+            <input type="time" id="newTime" [(ngModel)]="rescheduleForm.newTime" class="form-control">
+          </div>
+          
+          <div *ngIf="rescheduleForm.newDate && rescheduleForm.newTime" class="preview-times">
+            <p><strong>Preview:</strong></p>
+            <p>Your time ({{ userTimezone }}): {{ getPreviewTime() }}</p>
+            <p *ngIf="reschedulingClass.studentTimezone && reschedulingClass.studentTimezone !== userTimezone">
+              Student's time ({{ reschedulingClass.studentTimezone }}): {{ getPreviewTimeForStudent() }}
+            </p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button (click)="closeRescheduleModal()" class="btn btn-secondary">Cancel</button>
+        <button (click)="rescheduleClass()" class="btn btn-primary" 
+                [disabled]="!rescheduleForm.newDate || !rescheduleForm.newTime">
+          Reschedule Class
+        </button>
+      </div>
+    </div>
   </div>
 </div>

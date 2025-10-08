@@ -8,4 +8,7 @@ export interface Class {
     subject?: string;
     // legacy name field (optional)
     name?: string;
+    // timezone information
+    timezone?: string; // The timezone in which the class was created
+    utcDate?: Date; // UTC version of the class date for consistent storage
 }
