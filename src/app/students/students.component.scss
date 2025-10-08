@@ -1,0 +1,188 @@
+.students-page {
+  padding: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+
+  .header {
+    margin-bottom: 2rem;
+    text-align: center;
+
+    h2 {
+      margin: 0 0 0.5rem 0;
+      color: #333;
+    }
+
+    .subtitle {
+      color: #666;
+      font-size: 1rem;
+      margin: 0;
+    }
+  }
+
+  .loading, .access-denied {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+  }
+
+  .summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+
+    .summary-card {
+      background: #f8f9fa;
+      padding: 1.5rem;
+      border-radius: 8px;
+      text-align: center;
+      border-left: 4px solid #007bff;
+
+      h3 {
+        font-size: 2rem;
+        margin: 0 0 0.5rem 0;
+        color: #007bff;
+        font-weight: 700;
+      }
+
+      p {
+        margin: 0;
+        color: #666;
+        font-weight: 500;
+      }
+    }
+  }
+
+  .students-table-container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow: hidden;
+
+    .students-table {
+      width: 100%;
+      border-collapse: collapse;
+
+      thead {
+        background: #f8f9fa;
+
+        th {
+          padding: 1rem;
+          text-align: left;
+          font-weight: 600;
+          color: #333;
+          border-bottom: 2px solid #dee2e6;
+        }
+      }
+
+      tbody {
+        .student-row {
+          border-bottom: 1px solid #dee2e6;
+          transition: background-color 0.2s;
+
+          &:hover {
+            background-color: #f8f9fa;
+          }
+
+          td {
+            padding: 1rem;
+            vertical-align: middle;
+          }
+
+          .student-name {
+            .name-info {
+              strong {
+                display: block;
+                color: #333;
+              }
+
+              small {
+                color: #666;
+                font-size: 0.85rem;
+              }
+            }
+          }
+
+          .classes-count {
+            text-align: center;
+
+            .badge {
+              display: inline-block;
+              padding: 0.25rem 0.75rem;
+              border-radius: 12px;
+              background: #e9ecef;
+              color: #495057;
+              font-weight: 500;
+              min-width: 2rem;
+              text-align: center;
+
+              &.highlight {
+                background: #007bff;
+                color: white;
+              }
+            }
+          }
+
+          .payment-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-weight: 500;
+            font-size: 0.875rem;
+
+            &.status-paid {
+              background: #d4edda;
+              color: #155724;
+            }
+
+            &.status-pending {
+              background: #fff3cd;
+              color: #856404;
+            }
+
+            &.status-overdue {
+              background: #f8d7da;
+              color: #721c24;
+            }
+          }
+
+          .payment-date {
+            color: #666;
+            font-size: 0.875rem;
+          }
+
+          .no-data {
+            color: #999;
+            font-style: italic;
+          }
+        }
+      }
+    }
+
+    .empty-state {
+      padding: 3rem;
+      text-align: center;
+      color: #666;
+    }
+  }
+
+  // Responsive design
+  @media (max-width: 768px) {
+    .summary-cards {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .students-table-container {
+      overflow-x: auto;
+
+      .students-table {
+        min-width: 800px;
+      }
+    }
+  }
+
+  @media (max-width: 480px) {
+    .summary-cards {
+      grid-template-columns: 1fr;
+    }
+  }
+}

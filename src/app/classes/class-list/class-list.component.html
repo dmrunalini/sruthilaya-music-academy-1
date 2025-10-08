@@ -7,8 +7,10 @@
     <button (click)="nextWeek()">Next Week ⟩</button>
   </div>
   <div *ngIf="isTeacher" class="add-class">
-  <input #newClassInput type="text" [(ngModel)]="newClassName" placeholder="New class name" />
-  <button (click)="addClass()" [disabled]="isSubmitting">Add class</button>
+    <input #newClassInput type="text" [(ngModel)]="newClassName" placeholder="New class name" />
+    <input type="date" [(ngModel)]="newClassDate" [min]="minDate" />
+    <input type="time" [(ngModel)]="newClassTime" />
+    <button (click)="addClass()" [disabled]="isSubmitting || !newClassName || !newClassDate || !newClassTime">Add class</button>
   </div>
   <div *ngIf="visibleClasses && visibleClasses.length > 0; else empty">
     <ul>

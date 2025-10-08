@@ -38,6 +38,11 @@ export class NavbarComponent {
     return this.authService.isLoggedIn();
   }
 
+  isTeacher(): boolean {
+    const user = this.authService.getUserData();
+    return !!(user && user.role === 'teacher');
+  }
+
   logout() {
     this.authService.logout();
   }

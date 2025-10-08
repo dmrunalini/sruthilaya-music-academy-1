@@ -15,6 +15,7 @@ const routes: Routes = [
   { path: 'classes/:id', loadComponent: () => import('./app/classes/class-detail/class-detail.component').then(m => m.ClassDetailComponent), canActivate: [AuthGuard] },
   { path: 'calendar', loadComponent: () => import('./app/calendar/calendar.component').then(m => m.CalendarComponent), canActivate: [AuthGuard] },
   { path: 'materials', loadComponent: () => import('./app/materials/materials-menu/materials-menu.component').then(m => m.MaterialsMenuComponent), canActivate: [AuthGuard] },
+  { path: 'students', loadComponent: () => import('./app/students/students.component').then(m => m.StudentsComponent), canActivate: [AuthGuard] },
   { path: 'notifications', loadComponent: () => import('./app/notifications/notifications.component').then(m => m.NotificationsComponent) }
   ,
   { path: 'password-reset', loadComponent: () => import('./app/auth/password-reset/password-reset.component').then(m => m.PasswordResetComponent) },

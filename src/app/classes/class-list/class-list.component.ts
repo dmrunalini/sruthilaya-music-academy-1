@@ -17,6 +17,8 @@ export class ClassListComponent implements OnInit {
   classes: Class[] = [];
   isTeacher = false;
   newClassName = '';
+  newClassDate = '';
+  newClassTime = '';
   isSubmitting = false;
   @ViewChild('newClassInput', { static: false }) newClassInput?: ElementRef<HTMLInputElement>;
   currentUserName: string | null = null;
@@ -39,6 +41,11 @@ export class ClassListComponent implements OnInit {
   visibleClasses: Class[] = [];
 
   constructor(private firestoreService: FirestoreService, private authService: AuthService) {}
+
+  get minDate(): string {
+    const today = new Date();
+    return today.toISOString().split('T')[0]; // Returns YYYY-MM-DD format
+  }
 
   ngOnInit(): void {
     // Always initialize the week view so the header shows even before auth state resolves
@@ -152,7 +159,7 @@ export class ClassListComponent implements OnInit {
   }
 
   async addClass() {
-    console.log('addClass clicked', { isTeacher: this.isTeacher, newClassName: this.newClassName });
+    console.log('addClass clicked', { isTeacher: this.isTeacher, newClassName: this.newClassName, newClassDate: this.newClassDate, newClassTime: this.newClassTime });
     if (!this.isTeacher) {
       console.warn('addClass: current user is not a teacher');
       return;
@@ -167,21 +174,41 @@ export class ClassListComponent implements OnInit {
       console.warn('addClass: newClassName is empty');
       return;
     }
+    if (!this.newClassDate) {
+      console.warn('addClass: newClassDate is empty');
+      return;
+    }
+    if (!this.newClassTime) {
+      console.warn('addClass: newClassTime is empty');
+      return;
+    }
+
+    // Combine date and time into a single Date object
+    const classDateTime = new Date(`${this.newClassDate}T${this.newClassTime}`);
+    
+    // Check if the selected date/time is in the past
+    if (classDateTime <= new Date()) {
+      console.warn('addClass: Cannot create class for past date/time');
+      return;
+    }
+
     const user = this.authService.getUserData();
     this.isSubmitting = true;
     const classData: Partial<Class> = {
       studentName: '',
       name: this.newClassName as any,
       subject: '',
-      timeSlot: '',
+      timeSlot: this.newClassTime,
       teacherId: user?.uid || '',
-      classDate: new Date()
+      classDate: classDateTime
     } as any;
     try {
       console.log('addClass: creating class', classData);
       const res = await this.firestoreService.createClass(classData as any);
       console.log('Created class', res);
       this.newClassName = '';
+      this.newClassDate = '';
+      this.newClassTime = '';
       this.loadClasses();
     } catch (err) {
       console.error('Error creating class', err);

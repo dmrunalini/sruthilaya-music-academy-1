@@ -1,0 +1,93 @@
+<div class="students-page">
+  <div class="header">
+    <h2>Students Dashboard</h2>
+    <p class="subtitle">{{ currentMonth }} Overview</p>
+  </div>
+
+  <div *ngIf="loading" class="loading">
+    <p>Loading student data...</p>
+  </div>
+
+  <div *ngIf="!loading && !isTeacher" class="access-denied">
+    <p>Access denied. This page is only available for teachers.</p>
+  </div>
+
+  <div *ngIf="!loading && isTeacher" class="students-content">
+    <div class="summary-cards">
+      <div class="summary-card">
+        <h3>{{ students.length }}</h3>
+        <p>Total Students</p>
+      </div>
+      <div class="summary-card">
+        <h3>{{ getTotalRemainingClasses() }}</h3>
+        <p>Classes This Month</p>
+      </div>
+      <div class="summary-card">
+        <h3>{{ getPaidStudentsCount() }}</h3>
+        <p>Fees Paid</p>
+      </div>
+      <div class="summary-card">
+        <h3>{{ getOverdueStudentsCount() }}</h3>
+        <p>Fees Overdue</p>
+      </div>
+    </div>
+
+    <div class="students-table-container">
+      <table class="students-table">
+        <thead>
+          <tr>
+            <th>Student Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Classes Today</th>
+            <th>Classes This Month</th>
+            <th>Fee Status</th>
+            <th>Last Payment</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let student of students" class="student-row">
+            <td class="student-name">
+              <div class="name-info">
+                <strong>{{ student.name }}</strong>
+                <small *ngIf="student.age">({{ student.age }} years)</small>
+              </div>
+            </td>
+            <td>{{ student.email }}</td>
+            <td>
+              <span *ngIf="student.phone">
+                {{ student.countryCode || '+91' }} {{ student.phone }}
+              </span>
+              <span *ngIf="!student.phone" class="no-data">-</span>
+            </td>
+            <td class="classes-count">
+              <span class="badge" [class.highlight]="student.remainingClassesToday > 0">
+                {{ student.remainingClassesToday }}
+              </span>
+            </td>
+            <td class="classes-count">
+              <span class="badge" [class.highlight]="student.remainingClassesThisMonth > 0">
+                {{ student.remainingClassesThisMonth }}
+              </span>
+            </td>
+            <td>
+              <span class="payment-status" [class]="getPaymentStatusClass(student.feePaymentStatus)">
+                {{ getPaymentStatusText(student.feePaymentStatus) }}
+              </span>
+            </td>
+            <td>
+              <span *ngIf="student.lastPaymentDate" class="payment-date">
+                {{ student.lastPaymentDate | date: 'MMM d, yyyy' }}
+              </span>
+              <span *ngIf="!student.lastPaymentDate" class="no-data">-</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div *ngIf="students.length === 0" class="empty-state">
+        <p>No students found.</p>
+      </div>
+    </div>
+  </div>
+</div>

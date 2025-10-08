@@ -5,6 +5,7 @@
     <div class="categories">
       <h4>Categories</h4>
       <ul>
+        <li (click)="selectCategory('All Materials')" [class.active]="selectedCategory === null">All Materials</li>
         <li *ngFor="let c of categories" (click)="selectCategory(c)" [class.active]="c === selectedCategory">{{ c }}</li>
       </ul>
       <div *ngIf="isTeacher" class="create-signs">
@@ -68,11 +69,6 @@
         <h3 *ngIf="!modalEditable">{{ modalMaterial?.title }}</h3>
         <div *ngIf="modalEditable" style="display:flex;align-items:center;gap:8px">
           <input [(ngModel)]="modalTitle" placeholder="Title" style="flex:1;" />
-          <label *ngIf="isTeacher">Category:
-            <select [(ngModel)]="modalCategory">
-              <option *ngFor="let c of categories" [value]="c">{{c}}</option>
-            </select>
-          </label>
         </div>
       </div>
       <div class="modal-actions">

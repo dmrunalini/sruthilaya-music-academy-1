@@ -1,6 +1,7 @@
 <nav class="navbar">
   <a [routerLink]="homeLink">Home</a>
   <a *ngIf="isLoggedIn()" routerLink="/materials">Materials</a>
+  <a *ngIf="isTeacher()" routerLink="/students">Students</a>
   <!-- Classes link intentionally hidden from navbar; access classes via direct route or dashboard -->
   <span class="spacer"></span>
   <ng-container *ngIf="!isLoggedIn(); else logged">

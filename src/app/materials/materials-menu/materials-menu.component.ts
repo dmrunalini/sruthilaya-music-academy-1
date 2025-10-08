@@ -30,19 +30,25 @@ export class MaterialsMenuComponent implements OnInit {
     this.isTeacher = !!(u && u.role === 'teacher');
     this.auth.user$.subscribe(x => this.isTeacher = !!(x && x.role === 'teacher'));
 
+    // Initialize with "All Materials" view
+    this.selectedCategory = null;
+
     // Only subscribe to materials if authenticated (guard should also protect the route)
     if (this.auth.isLoggedIn()) {
       this.materialsService.getCategories().subscribe(cats => {
         this.categories = cats;
-        if (!this.selectedCategory && cats.length) this.selectedCategory = cats[0];
       });
 
+      // Load all materials initially
       this.loadMaterials();
     }
   }
 
   loadMaterials() {
-    this.materialsService.getMaterialsByCategory(this.selectedCategory || undefined).subscribe(ms => {
+    // Pass the selected category to filter materials, or undefined to show all if no categories exist
+    const categoryFilter = this.selectedCategory || undefined;
+    
+    this.materialsService.getMaterialsByCategory(categoryFilter).subscribe(ms => {
       // filter out placeholder category markers
       this.materials = (ms || []).filter(m => !(m.title || '').startsWith('__category__'));
     });
@@ -234,7 +240,7 @@ export class MaterialsMenuComponent implements OnInit {
   selectCategory(cat: string) {
     // close/reset any open modal when changing categories
     this.closeModal();
-    this.selectedCategory = cat;
+    this.selectedCategory = cat === 'All Materials' ? null : cat;
     this.loadMaterials();
   }
 
